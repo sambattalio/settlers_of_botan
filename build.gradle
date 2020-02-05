@@ -1,0 +1,15 @@
+apply plugin: 'idea'
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    implementation project(':lib:jsettlers2')
+}
+
+task list(dependsOn: configurations.compileClasspath) {
+    doLast {
+        println "classpath = ${configurations.compileClasspath.collect { File file -> file }}"
+    }
+}

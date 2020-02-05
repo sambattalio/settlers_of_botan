@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/settlers-of-botan.iml" filepath="$PROJECT_DIR$/.idea/settlers-of-botan.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/lib/settlers-of-botan.lib.iml" filepath="$PROJECT_DIR$/.idea/modules/lib/settlers-of-botan.lib.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/lib/jsettlers2/settlers-of-botan.lib.jsettlers2.iml" filepath="$PROJECT_DIR$/.idea/modules/lib/jsettlers2/settlers-of-botan.lib.jsettlers2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/lib/jsettlers2/settlers-of-botan.lib.jsettlers2.extraTest.iml" filepath="$PROJECT_DIR$/.idea/modules/lib/jsettlers2/settlers-of-botan.lib.jsettlers2.extraTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/lib/jsettlers2/settlers-of-botan.lib.jsettlers2.main.iml" filepath="$PROJECT_DIR$/.idea/modules/lib/jsettlers2/settlers-of-botan.lib.jsettlers2.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/lib/jsettlers2/settlers-of-botan.lib.jsettlers2.test.iml" filepath="$PROJECT_DIR$/.idea/modules/lib/jsettlers2/settlers-of-botan.lib.jsettlers2.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/settlers-of-botan.main.iml" filepath="$PROJECT_DIR$/.idea/modules/settlers-of-botan.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/settlers-of-botan.test.iml" filepath="$PROJECT_DIR$/.idea/modules/settlers-of-botan.test.iml" />
+    </modules>
+  </component>
+</project>

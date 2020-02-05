@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel>
+      <module name="settlers-of-botan.jsettlers2.extraTest" target="1.8" />
+      <module name="settlers-of-botan.jsettlers2.main" target="1.7" />
+      <module name="settlers-of-botan.jsettlers2.test" target="1.8" />
+      <module name="settlers-of-botan.lib.jsettlers2.extraTest" target="1.8" />
+      <module name="settlers-of-botan.lib.jsettlers2.main" target="1.7" />
+      <module name="settlers-of-botan.lib.jsettlers2.test" target="1.8" />
+      <module name="settlers-of-botan.lib_jsettlers2.extraTest" target="1.8" />
+      <module name="settlers-of-botan.lib_jsettlers2.main" target="1.7" />
+      <module name="settlers-of-botan.lib_jsettlers2.test" target="1.8" />
+      <module name="settlers-of-botan.main" target="1.8" />
+      <module name="settlers-of-botan.test" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>

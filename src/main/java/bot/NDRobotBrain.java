@@ -20,10 +20,10 @@ public class NDRobotBrain extends SOCRobotBrain {
 
         decisionMaker = new NDRobotDM(this);
         negotiator = new NDRobotNegotiator(this);
-//        monopolyStrategy = new NDMonopolyStrategy(game, ourPlayerData);
+        monopolyStrategy = new NDMonopolyStrategy(game, ourPlayerData);
         robberStrategy = new NDRobberStrategy(game, ourPlayerData, this, rand);
         discardStrategy = new NDDiscardStrategy(game, ourPlayerData, this, rand);
-//        openingBuildStrategy = new NDOpeningBuildStrategy(game, ourPlayerData);
+        openingBuildStrategy = new NDOpeningBuildStrategy(game, ourPlayerData);
     }
 
 

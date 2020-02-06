@@ -8,8 +8,6 @@ dependencies {
     implementation project(':lib:jsettlers2')
 }
 
-task list(dependsOn: configurations.compileClasspath) {
-    doLast {
-        println "classpath = ${configurations.compileClasspath.collect { File file -> file }}"
-    }
+compileJava {
+    classpath = tasks.getByPath(':lib:jsettlers2:serverJar').outputs.files
 }

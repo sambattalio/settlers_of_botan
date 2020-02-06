@@ -10,9 +10,7 @@ import soc.util.SOCRobotParameters;
 
 public class NDRobotClient extends SOCRobotClient {
 
-	NDRobotBrain bot = null;
-
-	public NDRobotClient(final String h, final int p, final String nn, final String pw, final String co) {
+	NDRobotClient(final String h, final int p, final String nn, final String pw, final String co) {
 		super(h, p, nn, pw, co);
 	}
 
@@ -57,7 +55,6 @@ public class NDRobotClient extends SOCRobotClient {
     }
 
     public SOCRobotBrain createBrain(final SOCRobotParameters params, final SOCGame ga, final CappedQueue<SOCMessage> mq) {
-		bot = new NDRobotBrain(this, params, ga, mq);
-        return null;
+		return new NDRobotBrain(this, params, ga, mq);
     }
 }

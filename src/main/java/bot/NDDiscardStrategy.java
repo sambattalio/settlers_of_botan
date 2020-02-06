@@ -9,7 +9,7 @@ import java.util.Random;
 
 public class NDDiscardStrategy extends DiscardStrategy {
     /**
-     * Create a DiscardStrategy for a {@link SOCRobotBrain}'s player.
+     * Create a DiscardStrategy for a {@link NDRobotBrain}'s player.
      *
      * @param ga   Our game
      * @param pl   Our player data in {@code ga}

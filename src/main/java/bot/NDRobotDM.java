@@ -84,6 +84,8 @@ public class NDRobotDM extends SOCRobotDM {
             }
         }
 
+        if (this.game.getBoard().settlementAtNode(edgeCoord) != null) return false;
+
         return true;
     }
 

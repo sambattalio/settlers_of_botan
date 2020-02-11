@@ -135,6 +135,7 @@ public class NDRobotDM extends SOCRobotDM {
      *
      * @param coord the edge to branch off of
      * @return a vector of coordinates starting with the existing road and ending with the optimal settlement
+     * @see NDRobotDM::comparePath the comparison to use
      */
     public Vector<Integer> BFS(int coord) {
         Queue<Vector<Integer>> queue = new LinkedList<>();
@@ -186,13 +187,13 @@ public class NDRobotDM extends SOCRobotDM {
 
     /**
      * Compares two paths (vectors of roads followed by a settlement) for size and then quality of destination
+     * Does not check the validity of the settlements
      *
      * @param one the first path
      * @param two the second path
      * @return a positive if the first path is better, or a negative if the second path is better
      */
     private int comparePaths(Vector<Integer> one, Vector<Integer> two) {
-        D.ebugPrintln("Comparing " + one + " to " + two);
         if (two.size() == 0) {
             return 4;
         } else if (one.size() == 0) {
@@ -212,6 +213,13 @@ public class NDRobotDM extends SOCRobotDM {
         // TODO could consider relative rarities, or relative need as well, ports, etc.
     }
 
+    /**
+     * Compares the potential location of two settlements based on the values of the hexes around them
+     * Does not check the validity of the settlements
+     * @param one
+     * @param two
+     * @return
+     */
     private int compareSettlements(int one, int two) {
         if (totalProbabilityAtNode(one) > totalProbabilityAtNode(two)) {
             return 1;

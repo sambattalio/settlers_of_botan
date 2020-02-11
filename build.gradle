@@ -9,5 +9,5 @@ dependencies {
 }
 
 compileJava {
-    classpath = tasks.getByPath(':lib:jsettlers2:serverJar').outputs.files
+    classpath = tasks.getByPath(':lib:jsettlers2:fullJar').outputs.files
 }

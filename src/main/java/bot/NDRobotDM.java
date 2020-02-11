@@ -196,9 +196,9 @@ public class NDRobotDM extends SOCRobotDM {
             return -2;
         }
 
-        if (totalProbabilityAtNode(one.lastElement()) > totalProbabilityAtNode(one.lastElement())) {
+        if (totalProbabilityAtNode(one.lastElement()) > totalProbabilityAtNode(two.lastElement())) {
             return 1;
-        } else if (totalProbabilityAtNode(one.lastElement()) < totalProbabilityAtNode(one.lastElement())) {
+        } else if (totalProbabilityAtNode(one.lastElement()) < totalProbabilityAtNode(two.lastElement())) {
             return -1;
         }
 

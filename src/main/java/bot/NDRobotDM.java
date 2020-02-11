@@ -1,11 +1,8 @@
 package bot;
 
 import soc.game.SOCSettlement;
-import soc.robot.SOCRobotBrain;
-import soc.robot.SOCRobotDM;
+import soc.robot.*;
 import soc.game.SOCPlayingPiece;
-import soc.robot.SOCPossibleSettlement;
-import soc.robot.SOCPossibleRoad;
 import soc.debug.D;
 import soc.game.SOCRoutePiece;
 
@@ -40,11 +37,11 @@ public class NDRobotDM extends SOCRobotDM {
             if (piece.getType() == SOCPlayingPiece.ROAD) {
                 Vector<Integer> searchResult = BFS(piece.getCoordinates());
                 //TODO refactor to pass in best path in some form so that even less is explored, and to take in nodes instead of edges
-                D.ebugPrintln("Best on road " + piece + " was " + searchResult);
+                D.ebugPrintln("Best on edge " + piece.getCoordinates() + " was " + searchResult);
                 // has pre-existing road first so we remove it
                 if (searchResult.size() > 0) searchResult.removeElementAt(0);
                 // Check if better than the best path
-                if (comparePaths(searchResult, bestPath) > 1) {
+                if (comparePaths(searchResult, bestPath) > 0) {
                     bestPath = searchResult;
                     D.ebugPrintln("Best path set:" + bestPath.toString());
                 }
@@ -52,8 +49,18 @@ public class NDRobotDM extends SOCRobotDM {
         }
 
         D.ebugPrintln("Best at end" + bestPath.toString());
-        // change last coord to settlement as it will always be one from our BFS
-        buildingPlan.push(new SOCPossibleSettlement(ourPlayerData, bestPath.lastElement(), null));
+
+        // if we have settlements left to place
+        // TODO find settlements left constant
+        if(ourPlayerData.getSettlements().size() < 5) {
+            // change last coord to settlement as it will always be one from our BFS
+            buildingPlan.push(new SOCPossibleSettlement(ourPlayerData, bestPath.lastElement(), null));
+        } else {
+            //try to upgrade if we run out of settlements
+            //noinspection OptionalGetWithoutIsPresent
+            int toUpgrade = ourPlayerData.getSettlements().stream().map(SOCPlayingPiece::getCoordinates).max(this::compareSettlements).get();
+            buildingPlan.push(new SOCPossibleCity(ourPlayerData, toUpgrade));
+        }
         for (int j = bestPath.size() - 2; j >= 0; j--)
             buildingPlan.push(new SOCPossibleRoad(ourPlayerData, bestPath.get(j), null));
     }
@@ -65,10 +72,11 @@ public class NDRobotDM extends SOCRobotDM {
      * @return if there is no settlement there or at any of the adjacent nodes
      */
     public boolean canBuildSettlement(final int coord) {
+        if(!game.getBoard().isNodeOnLand(coord)) return false;
+
         if (game.getBoard().settlementAtNode(coord) != null) return false;
 
         for (int i = 0; i <= 2; i++) {
-            D.ebugPrintln("Trying to find adjacent nodes from node: " + coord + " in direction: " + i);
             if (game.getBoard().settlementAtNode(game.getBoard().getAdjacentNodeToNode(coord, i)) != null)
                 return false;
         }
@@ -113,12 +121,11 @@ public class NDRobotDM extends SOCRobotDM {
         int sum = 0;
         for (int hexCoord : game.getBoard().getAdjacentHexesToNode(nodeCoord)) {
             int diceNumber = game.getBoard().getNumberOnHexFromCoord(hexCoord);
-            D.ebugPrintln("Value of Hex piece " + String.valueOf(hexCoord) + ": " + String.valueOf(diceNumber));
             // skip water
             if (diceNumber > 12 || diceNumber <= 0) continue;
             sum += (diceNumber > 7) ? 13 - diceNumber : diceNumber - 1;
         }
-        D.ebugPrintln("Sum is: " + String.valueOf(sum));
+        D.ebugPrintln("Sum at node " + nodeCoord + " was " + String.valueOf(sum));
 
         return sum;
     }
@@ -130,17 +137,17 @@ public class NDRobotDM extends SOCRobotDM {
      * @return a vector of coordinates starting with the existing road and ending with the optimal settlement
      */
     public Vector<Integer> BFS(int coord) {
-        Queue<Vector<Integer>> stack = new LinkedList<>();
+        Queue<Vector<Integer>> queue = new LinkedList<>();
 
         // push initial coord
         Vector<Integer> vec = new Vector<>();
         vec.add(coord);
-        stack.add(vec);
+        queue.add(vec);
 
         Vector<Integer> bestPath = new Vector<>();
 
-        while (!stack.isEmpty()) {
-            Vector<Integer> current = stack.poll();
+        while (!queue.isEmpty()) {
+            Vector<Integer> current = queue.poll();
 
             if (current.size() > bestPath.size() && bestPath.size() != 0) continue;
 
@@ -149,17 +156,18 @@ public class NDRobotDM extends SOCRobotDM {
                 D.ebugPrintln("Considering node " + node + " onto " + current);
                 if (canBuildSettlement(node)) {
                     D.ebugPrintln("Can build settlement at " + node);
-                    D.ebugPrintln("Sum of probabilities: " + totalProbabilityAtNode(node));
-                    if (comparePaths(current, bestPath) > 0) {
-                        bestPath = new Vector<>(current);
-                        // add the settlement to the end of the path leading here
-                        D.ebugPrintln("Adding node " + String.valueOf(node) + " to " + bestPath);
-                        bestPath.add(node);
+
+                    Vector<Integer> next = new Vector<>(current);
+                    // add the settlement to the end of the path leading here
+                    next.add(node);
+                    if (comparePaths(next, bestPath) > 0) {
+                        bestPath = next;
+                        D.ebugPrintln("Best so far was: " + bestPath.toString());
                     }
                 }
             }
 
-            // Check for new roads to build to add to stack
+            // Check for new roads to build to add to queue
             for (int edge : game.getBoard().getAdjacentEdgesToEdge(current.lastElement())) {
                 D.ebugPrintln("Adjacent edge to " + current.lastElement() + ": " + edge);
                 boolean isLoop = current.contains(edge);
@@ -167,7 +175,7 @@ public class NDRobotDM extends SOCRobotDM {
                     D.ebugPrintln("Can build road on " + edge);
                     Vector<Integer> newPath = new Vector<>(current);
                     newPath.add(edge);
-                    stack.add(newPath);
+                    queue.add(newPath);
                 }
             }
 
@@ -184,6 +192,7 @@ public class NDRobotDM extends SOCRobotDM {
      * @return a positive if the first path is better, or a negative if the second path is better
      */
     private int comparePaths(Vector<Integer> one, Vector<Integer> two) {
+        D.ebugPrintln("Comparing " + one + " to " + two);
         if (two.size() == 0) {
             return 4;
         } else if (one.size() == 0) {
@@ -196,14 +205,21 @@ public class NDRobotDM extends SOCRobotDM {
             return -2;
         }
 
-        if (totalProbabilityAtNode(one.lastElement()) > totalProbabilityAtNode(two.lastElement())) {
+        int x = compareSettlements(one.lastElement(), two.lastElement());
+        if (x != 0) return x;
+
+        return -1;
+        // TODO could consider relative rarities, or relative need as well, ports, etc.
+    }
+
+    private int compareSettlements(int one, int two) {
+        if (totalProbabilityAtNode(one) > totalProbabilityAtNode(two)) {
             return 1;
-        } else if (totalProbabilityAtNode(one.lastElement()) < totalProbabilityAtNode(two.lastElement())) {
+        } else if (totalProbabilityAtNode(one) < totalProbabilityAtNode(two)) {
             return -1;
         }
 
         return 0;
-        // TODO could consider relative rarities, or relative need as well
     }
 
 

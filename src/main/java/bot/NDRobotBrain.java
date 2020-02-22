@@ -1,5 +1,6 @@
 package bot;
 
+import bot.decision.DecisionTreeDM;
 import soc.game.SOCGame;
 import soc.message.SOCMessage;
 import soc.robot.SOCRobotBrain;
@@ -18,7 +19,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     public void setOurPlayerData() {
         super.setOurPlayerData();
 
-        decisionMaker = new NDRobotDM(this);
+        decisionMaker = new DecisionTreeDM(this);
         negotiator = new NDRobotNegotiator(this);
         monopolyStrategy = new NDMonopolyStrategy(game, ourPlayerData);
         robberStrategy = new NDRobberStrategy(game, ourPlayerData, this, rand);

@@ -1,10 +1,8 @@
 package bot;
 
-import soc.game.SOCSettlement;
+import soc.game.*;
 import soc.robot.*;
-import soc.game.SOCPlayingPiece;
 import soc.debug.D;
-import soc.game.SOCRoutePiece;
 
 import java.util.*;
 
@@ -68,10 +66,11 @@ public class NDRobotDM extends SOCRobotDM {
     /**
      * Returns if legally possible to hypothetically place a settlement at coord
      *
+     * @param game
      * @param coord the node to check
      * @return if there is no settlement there or at any of the adjacent nodes
      */
-    public boolean canBuildSettlement(final int coord) {
+    public static boolean canBuildSettlement(SOCGame game, final int coord) {
         if(!game.getBoard().isNodeOnLand(coord)) return false;
 
         if (game.getBoard().settlementAtNode(coord) != null) return false;
@@ -114,10 +113,11 @@ public class NDRobotDM extends SOCRobotDM {
     /**
      * Returns the sum of the probabilities of the tiles surrounding a node
      *
+     * @param game the game board
      * @param nodeCoord the node to check
      * @return the total probability
      */
-    public int totalProbabilityAtNode(final int nodeCoord) {
+    public static int totalProbabilityAtNode(SOCGame game, final int nodeCoord) {
         int sum = 0;
         for (int hexCoord : game.getBoard().getAdjacentHexesToNode(nodeCoord)) {
             int diceNumber = game.getBoard().getNumberOnHexFromCoord(hexCoord);
@@ -155,7 +155,7 @@ public class NDRobotDM extends SOCRobotDM {
             // Check for possible settlements
             for (int node : game.getBoard().getAdjacentNodesToEdge(current.lastElement())) {
                 D.ebugPrintln("Considering node " + node + " onto " + current);
-                if (canBuildSettlement(node)) {
+                if (canBuildSettlement(game, node)) {
                     D.ebugPrintln("Can build settlement at " + node);
 
                     Vector<Integer> next = new Vector<>(current);
@@ -221,9 +221,9 @@ public class NDRobotDM extends SOCRobotDM {
      * @return
      */
     private int compareSettlements(int one, int two) {
-        if (totalProbabilityAtNode(one) > totalProbabilityAtNode(two)) {
+        if (totalProbabilityAtNode(game, one) > totalProbabilityAtNode(game, two)) {
             return 1;
-        } else if (totalProbabilityAtNode(one) < totalProbabilityAtNode(two)) {
+        } else if (totalProbabilityAtNode(game, one) < totalProbabilityAtNode(game, two)) {
             return -1;
         }
 

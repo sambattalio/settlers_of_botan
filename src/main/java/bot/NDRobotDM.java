@@ -90,7 +90,7 @@ public class NDRobotDM extends SOCRobotDM {
      * @param sourceEdge the edge that we have gotten to this node from
      * @return if there is no road already there
      */
-    public static boolean canBuildRoad(SOCGame game, final int edgeCoord, final int sourceEdge) {
+    public boolean canBuildRoad(SOCGame game, final int edgeCoord, final int sourceEdge) {
         for (SOCRoutePiece r : game.getBoard().getRoadsAndShips()) {
             if (edgeCoord == r.getCoordinates()) {
                 return false;

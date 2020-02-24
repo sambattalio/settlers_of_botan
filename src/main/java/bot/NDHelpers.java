@@ -6,7 +6,7 @@ import soc.debug.D;
 
 
 // is this right way to import this TODO
-import NDRobotDM;
+import bot.NDRobotDM;
 
 import java.util.*;
 
@@ -45,8 +45,6 @@ public class NDHelpers {
         return abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= MAX_ARMY_DIFF;
     }
 
-    }
-
     /**
      * Returns if a player can afford to build settlement, given a resourceset
      * 
@@ -68,7 +66,31 @@ public class NDHelpers {
     public static boolean canBuildSettlement(SOCGame game, int playerNo) {
          return game.getPlayer(playerNo).getPotentialSettlements().size() != 0;
     }
+     /**
+     * Returns coords of settlements that will yield the resources in the set
+     *
+     * TODO maybe ports too?
+     * Right now only handles arrays up to size 3
+     *
+     * @param game
+     * @param playerNo
+     * @param resources: int array where integers are SOCResourceConstant resource types
+     * @return coords vector 
+     */
+    public static Vector<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, int[] resources) {
+        
+        Vector<Integer> nodes = new Vector<Integer>();
 
+        for (int node : game.getPlayer(playerNo).getPotentialSettlements_arr()) {
+            Set<int[]> resourceSet = new HashSet<>(Arrays.asList(resources));
+            for (int hex : game.getBoard().getAdjacentHexesToNode(node)) {
+               resourceSet.remove(game.getBoard().getHexTypeFromCoord(hex));
+            }
+            if (resourceSet.isEmpty()) nodes.add(node);
+        }
+
+        return nodes;
+    }
 
     /**
      * Returns if there exists a settlement that will yield the resources in the set
@@ -82,34 +104,9 @@ public class NDHelpers {
      * @return if there is a settlement that can yield these resources
      */
     public static boolean existsQualitySettlementFor(SOCGame game, int playerNo, int[] resources) {
-        return findPotentialSettlementFor(game, playerNo, resources) != -1;       
+        return findPotentialSettlementsFor(game, playerNo, resources).size() > 0;       
     }
 
-     /**
-     * Returns coords of settlements that will yield the resources in the set
-     *
-     * TODO maybe ports too?
-     * Right now only handles arrays up to size 3
-     *
-     * @param game
-     * @param playerNo
-     * @param resources: int array where integers are SOCResourceConstant resource types
-     * @return coords vector 
-     */
-    public static Vector<int> findPotentialSettlementsFor(SOCGame game, int playerNo, int[] resources) {
-        
-        Vector<int> nodes = new Vector<int>();
-
-        for (int node : game.getPlayer(playerNo).getPotentialSettlements_arr()) {
-            Set<int> resources = new HashSet<>(Arrays.asList(resources);
-            for (int hex : game.getBoard().getAdjacentHexesToNode(node)) {
-               resources.remove(game.getBoard().getHexTypeFromCoord(hex));
-            }
-            if (resources.isEmpty()) nodes.add(node);
-        }
-
-        return nodes;
-    }
 
 
      /**
@@ -123,13 +120,13 @@ public class NDHelpers {
      *
      */
     public static int bestPossibleSettlement(SOCGame game, int playerNo, int[] resources) {
-        Vector<int> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
+        Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
         
-        int best_node = possible_nodes[0];
+        int best_node = possible_nodes.get(0);
 
         for (int i = 1; i < possible_nodes.size(); i++) {
-            if (NDRobotDM.compareSettlements(best_node, possible_nodes[i]) < 0) {
-                best_node = possible_nodes[i]; 
+            if (NDRobotDM.totalProbabilityAtNode(game, best_node) > NDRobotDM.totalProbabilityAtNode(game, possible_nodes.get(i))) {
+                best_node = possible_nodes.get(i); 
             }
         }
         
@@ -144,12 +141,12 @@ public class NDHelpers {
      * @param edgeCoord edge to build off of
      * @return Vector of coords
      */
-    public static Vector<int> findPossibleRoads(SOCGame game, final int edgeCoord) {
+    public static Vector<Integer> findPossibleRoads(SOCGame game, final int edgeCoord) {
         
-        Vector<int> possibleRoads = new Vector<int>();
+        Vector<Integer> possibleRoads = new Vector<Integer>();
         
         for (int edge : game.getBoard().getAdjacentEdgesToEdge(edgeCoord)) {
-            if (NDRobotDM.canBuildRoad(game, edge, edgeCoord)) {
+            if (canBuildRoadTwo(game, edge, edgeCoord)) {
                 possibleRoads.add(edge);
             } 
         }
@@ -172,16 +169,16 @@ public class NDHelpers {
 
         for (SOCLRPathData path : pathData) {
             // check if can build off beginning
-            Vector<int> possibleFront = findPossibleRoads(path.getBeginning());
+            Vector<Integer> possibleFront = findPossibleRoads(game, path.getBeginning());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
-            if (possibleFront.size() != 0) return possibleFront[0];
+            if (possibleFront.size() != 0) return possibleFront.get(0);
 
             // same but end...
-            Vector<int> possibleEnd = findPossibleRoads(path.getEnd());
+            Vector<Integer> possibleEnd = findPossibleRoads(game, path.getEnd());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
-            if (possibleEnd.size() != 0) return possibleEnd[0];
+            if (possibleEnd.size() != 0) return possibleEnd.get(0);
         }
         
         return -1;
@@ -199,6 +196,24 @@ public class NDHelpers {
      
         // here we know we are competitive... now lets see if we can reach
         //TODO try to build off getLRPaths()????
+        return true;
+    }
+
+    public static boolean canBuildRoadTwo(SOCGame game, final int edgeCoord, final int sourceEdge) {
+        for (SOCRoutePiece r : game.getBoard().getRoadsAndShips()) {
+            if (edgeCoord == r.getCoordinates()) {
+                return false;
+            }
+        }
+
+        // TODO replace with a 'node on edges' method call
+        List<Integer> nodesOnEdgeOne = game.getBoard().getAdjacentNodesToEdge(edgeCoord);
+        List<Integer> nodesOnEdgeTwo = game.getBoard().getAdjacentNodesToEdge(sourceEdge);
+        Optional<Integer> connectingNode = nodesOnEdgeOne.stream().filter(nodesOnEdgeTwo::contains).findFirst();
+
+        if(!connectingNode.isPresent()) return false; // edges do not touch
+        
+        return true;
     }
 
 

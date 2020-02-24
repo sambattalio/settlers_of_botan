@@ -76,7 +76,7 @@ public class NDHelpers {
      * @param resources: int array where integers are SOCResourceConstant resource types
      * @return if there is a settlement that can yield these resources
      */
-    public static boolean existsQualitySettlementFor(SOCGame game, int playerNo, int[] resources) {
+    public static boolean existsQualitySettlementFor(SOCGame game, int playerNo, List<Integer> resources) {
         return !findPotentialSettlementsFor(game, playerNo, resources).isEmpty();       
     }
 
@@ -91,7 +91,7 @@ public class NDHelpers {
      * @param resources: int array where integers are SOCResourceConstant resource types
      * @return coords vector 
      */
-    public static Vector<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, int[] resources) {
+    public static Vector<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, List<Integer> resources) {
 
         Vector<Integer> nodes = new Vector<Integer>();
 
@@ -119,11 +119,12 @@ public class NDHelpers {
      * @param playerNo
      * @param resources
      *
-     * @return coord of best settlement
+     * @return best settlement
      *
      */
-    public static int bestPossibleSettlement(SOCGame game, int playerNo, int[] resources) {
-        Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
+    public static SOCPossibleSettlement bestPossibleSettlement(SOCGame game, SOCPlayer player, List<Integer> resources) {
+        int playerNo = player.getPlayerNumber();
+    	Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
         
         int best_node = possible_nodes.get(0);
 
@@ -133,7 +134,7 @@ public class NDHelpers {
             }
         }
         
-        return best_node;
+        return new SOCPossibleSettlement(player, best_node, null); //TODO add potential road list
     }
 
 
@@ -162,13 +163,13 @@ public class NDHelpers {
      *
      * @param game
      * @param playerNo
-     * @return coord of best road to build
+     * @return best road to build
      */
-    public static int bestPossibleLongRoad(SOCGame game, int playerNo) {
+    public static SOCPossibleRoad bestPossibleLongRoad(SOCGame game, SOCPlayer player) {
         // for now the strat is to try to build off of the longest road(s)
         // of the player
         // TODO maybe import ?
-        Vector<SOCLRPathData> pathData = game.getPlayer(playerNo).getLRPaths();
+        Vector<SOCLRPathData> pathData = game.getPlayer(player.getPlayerNumber()).getLRPaths();
 
         for (SOCLRPathData path : pathData) {
             // check if can build off beginning
@@ -176,16 +177,16 @@ public class NDHelpers {
             Vector<Integer> possibleFront = findPossibleRoads(game, path.getBeginning());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
-            if (possibleFront.size() != 0) return possibleFront.get(0);
+            if (possibleFront.size() != 0) return new SOCPossibleRoad(player, possibleFront.get(0), null);
 
             // same but end...
             Vector<Integer> possibleEnd = findPossibleRoads(game, path.getEnd());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
-            if (possibleEnd.size() != 0) return possibleEnd.get(0);
+            if (possibleEnd.size() != 0) return new SOCPossibleRoad(player, possibleEnd.get(0), null);
         }
         
-        return -1;
+        return null;
     }
 
     /**
@@ -220,7 +221,5 @@ public class NDHelpers {
         
         return true;
     }
-
-
 
 }

@@ -1,5 +1,10 @@
 package bot.decision;
 
+import soc.game.SOCGame;
+import soc.game.SOCPlayer;
+
+import bot.NDHelpers;
+
 import soc.robot.SOCPossibleCard;
 import soc.robot.SOCPossibleCity;
 import soc.robot.SOCPossiblePiece;
@@ -13,8 +18,8 @@ import static soc.robot.SOCPossiblePiece.*;
 import static soc.robot.SOCPossiblePiece.CARD;
 
 public class LargestArmyStrategy {
-    public static boolean shouldUse() {
-        return false;
+    public static boolean shouldUse(SOCGame game, SOCPlayer player) {
+    	return NDHelpers.isCompetitiveForLargestArmy(game, player.getPlayerNumber());
     }
 
     public static SOCPossiblePiece plan(DecisionTreeDM decisionTreeDM) {

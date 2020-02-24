@@ -1,6 +1,7 @@
 package bot.decision;
 
 import bot.NDRobotDM;
+import bot.NDHelpers;
 import soc.game.*;
 import soc.robot.*;
 
@@ -18,10 +19,10 @@ public class DecisionTreeDM extends SOCRobotDM {
     }
 
     @Override
-    public void planStuff(int strategy) {
-        if(LongestRoadStrategy.shouldUse()) {
+    public void planStuff(int strategy) { 
+        if( LongestRoadStrategy.shouldUse(brain.getGame(), brain.getOurPlayerData()) ) {
             addToPlan(LongestRoadStrategy.plan(this));
-        } else if(LargestArmyStrategy.shouldUse()) {
+        } else if(LargestArmyStrategy.shouldUse(brain.getGame(), brain.getOurPlayerData())) {
             addToPlan(LargestArmyStrategy.plan(this));
         } else {
             addToPlan(DefaultStrategy.plan(this));
@@ -78,14 +79,15 @@ public class DecisionTreeDM extends SOCRobotDM {
         }
 
         public boolean canBuildSettlement() {
-            return false;
+            return NDHelpers.canBuildSettlement(brain.getGame(), brain.getOurPlayerData().getPlayerNumber());
         }
 
         public Optional<SOCPossibleSettlement> findQualitySettlementFor(List<Integer> resources) {
-            return Optional.empty();
+            return Optional.ofNullable(NDHelpers.bestPossibleSettlement(brain.getGame(), brain.getOurPlayerData(), resources));
         }
 
         public Optional<SOCPossibleCity> findQualityCityFor(List<Integer> resources) {
+        	//TODO Upgrade settlements to cities
             return Optional.empty();
         }
 
@@ -98,7 +100,8 @@ public class DecisionTreeDM extends SOCRobotDM {
         }
 
         public Optional<SOCPossiblePiece> findQualityRoad(boolean considerLongestRoad) {
-            return Optional.empty();
+            if (considerLongestRoad) return Optional.ofNullable(NDHelpers.bestPossibleLongRoad(brain.getGame(), brain.getOurPlayerData()));
+            else return Optional.empty(); //TODO add quality road search based on resources like with settlements & cities
         }
     }
 }

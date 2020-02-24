@@ -10,21 +10,30 @@ import java.util.Optional;
 
 import static soc.game.SOCResourceConstants.WOOD;
 import static soc.game.SOCResourceConstants.CLAY;
+
+import soc.game.SOCGame;
+import soc.game.SOCPlayer;
+
+import bot.NDHelpers;
+
 import static soc.robot.SOCPossiblePiece.SETTLEMENT;
 import static soc.robot.SOCPossiblePiece.ROAD;
 import static soc.robot.SOCPossiblePiece.CITY;
 import static soc.robot.SOCPossiblePiece.CARD;
 
+//import bot.NDHelpers;
+
 public class LongestRoadStrategy {
 
-    public static boolean shouldUse() {
-        return false;
+    public static boolean shouldUse(SOCGame game, SOCPlayer player) {
+        return NDHelpers.isCompetitiveForLongestRoad(game, player.getPlayerNumber());
     }
 
     public static SOCPossiblePiece plan(DecisionTreeDM decisionTreeDM) {
         Optional<SOCPossibleSettlement> possibleSettlement;
         Optional<SOCPossibleCity> possibleCity;
 
+	//TODO Check if road is threatened before performing other actions
         if (decisionTreeDM.getHelpers().haveResourcesForRoadAndSettlement()) {
             return decisionTreeDM.getHelpers().findQualityRoad(true).orElse(null);
         } else if (decisionTreeDM.getHelpers().haveResourcesFor(SETTLEMENT)) {

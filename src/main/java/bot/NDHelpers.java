@@ -17,12 +17,16 @@ public class NDHelpers {
     public static boolean isCompetitiveForLongestRoad(SOCGame game, int playerNo) {
         SOCPlayer bestPlayer = game.getPlayerWithLongestRoad();
 
+        /* No one has it yet */
+        if(bestPlayer == null)
+            return true;
+
         /* Of course i know him... he's me */
         if (bestPlayer.getPlayerNumber() == playerNo) return true;
 
         /* Check diff in length */
         SOCPlayer ndBot = game.getPlayer(playerNo);
-        return isLongestRoadPossible(game, playerNo) && abs(ndBot.getLongestRoadLength() - bestPlayer.getLongestRoadLength()) <= MAX_ROAD_DIFF;
+        return abs(ndBot.getLongestRoadLength() - bestPlayer.getLongestRoadLength()) <= MAX_ROAD_DIFF;
     }
   
     /**
@@ -40,17 +44,6 @@ public class NDHelpers {
         SOCPlayer ndBot = game.getPlayer(playerNo);
 
         return game.getNumDevCards() != 0 && abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= MAX_ARMY_DIFF;
-    }
-
-    /**
-     * Returns if a player can afford to build settlement, given a resourceset
-     * 
-     * @param resources
-     * @return true if can afford else false
-     */
-    public static boolean canAffordSettlement(SOCResourceSet resources) {
-        return (resources.contains(SOCResourceConstants.CLAY) && resources.contains(SOCResourceConstants.WOOD)
-             && resources.contains(SOCResourceConstants.WHEAT) && resources.contains(SOCResourceConstants.SHEEP));
     }
 
     /**
@@ -95,17 +88,16 @@ public class NDHelpers {
 
         Vector<Integer> nodes = new Vector<Integer>();
 
-        for (int node : game.getPlayer(playerNo).getPotentialSettlements_arr()) {
-            
-        	Set<Integer> resourceSet = new HashSet<>(); //Had weird error with constructor
-            for (int i : resources) {
-                resourceSet.add(i);
-            }
+        for (int node : game.getPlayer(playerNo).getPotentialSettlements()) {
+
+            Set<Integer> resourceSet = new HashSet<>(resources);
 
             for (int hex : game.getBoard().getAdjacentHexesToNode(node)) {
-               resourceSet.remove(game.getBoard().getHexTypeFromCoord(hex));
+               if(resourceSet.contains(game.getBoard().getHexTypeFromCoord(hex))) {
+                   nodes.add(node);
+                   break;
+               }
             }
-            if (resourceSet.isEmpty()) nodes.add(node);
         }
 
         return nodes;
@@ -126,15 +118,15 @@ public class NDHelpers {
         int playerNo = player.getPlayerNumber();
     	Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
         
-        int best_node = possible_nodes.get(0);
+        int bestNode = possible_nodes.get(0);
 
         for (int i = 1; i < possible_nodes.size(); i++) {
-            if (NDRobotDM.totalProbabilityAtNode(game, best_node) > NDRobotDM.totalProbabilityAtNode(game, possible_nodes.get(i))) {
-                best_node = possible_nodes.get(i); 
+            if (NDRobotDM.totalProbabilityAtNode(game, bestNode) > NDRobotDM.totalProbabilityAtNode(game, possible_nodes.get(i))) {
+                bestNode = possible_nodes.get(i);
             }
         }
         
-        return new SOCPossibleSettlement(player, best_node, null); //TODO add potential road list
+        return new SOCPossibleSettlement(player, bestNode, null); //TODO add potential road list
     }
 
 
@@ -162,7 +154,7 @@ public class NDHelpers {
      * Returns coord of best possible road to place to maximize length
      *
      * @param game
-     * @param playerNo
+     * @param player
      * @return best road to build
      */
     public static SOCPossibleRoad bestPossibleLongRoad(SOCGame game, SOCPlayer player) {

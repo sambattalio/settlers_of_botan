@@ -1,5 +1,6 @@
 package bot.decision;
 
+import soc.game.*;
 import soc.robot.SOCPossibleCard;
 import soc.robot.SOCPossibleCity;
 import soc.robot.SOCPossiblePiece;
@@ -7,12 +8,10 @@ import soc.robot.SOCPossibleSettlement;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static soc.game.SOCResourceConstants.WOOD;
 import static soc.game.SOCResourceConstants.CLAY;
-
-import soc.game.SOCGame;
-import soc.game.SOCPlayer;
 
 import bot.NDHelpers;
 
@@ -33,7 +32,7 @@ public class LongestRoadStrategy {
         Optional<SOCPossibleSettlement> possibleSettlement;
         Optional<SOCPossibleCity> possibleCity;
 
-	//TODO Check if road is threatened before performing other actions
+        //TODO Check if road is threatened before performing other actions
         if (decisionTreeDM.getHelpers().haveResourcesForRoadAndSettlement()) {
             return decisionTreeDM.getHelpers().findQualityRoad(true).orElse(null);
         } else if (decisionTreeDM.getHelpers().haveResourcesFor(SETTLEMENT)) {

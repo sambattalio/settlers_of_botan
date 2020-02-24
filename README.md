@@ -3,7 +3,9 @@ Settlers of Catan bot for CSE 40971 @ Notre Dame. Built using JSettlers2
 
 ## Dependencies
 
-Jack - can you describe any dependencies and "Provide a set of instructions to download and install the required dependencies" (sorry youre the setup guy)
+Our bot depends on Gradle for building with dependencies. [Install Gradle](https://gradle.org/install/)
+
+As well, we depend upon the [JSettlers library](https://github.com/jdmonin/JSettlers2) as our Catan implementation. We use git submodules to include this, and it can be setup with `git pull $REPO --recursive` or `make update`.
 
 ## Getting Set Up
 

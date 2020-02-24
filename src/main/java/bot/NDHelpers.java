@@ -38,6 +38,7 @@ public class NDHelpers {
 
         /* Check diff in length */
         SOCPlayer ndBot = game.getPlayer(playerNo);
+
         return game.getNumDevCards() != 0 && abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= MAX_ARMY_DIFF;
     }
 
@@ -90,19 +91,21 @@ public class NDHelpers {
      * @param resources: int array where integers are SOCResourceConstant resource types
      * @return coords vector 
      */
-    public static Vector<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, int[] r) {
-        
+    public static Vector<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, int[] resources) {
+
         Vector<Integer> nodes = new Vector<Integer>();
 
         for (int node : game.getPlayer(playerNo).getPotentialSettlements_arr()) {
-            Set<Integer> resources = new HashSet<>();//(Arrays.asList(r));
-            for (int i : r) {
-                resources.add(i);
+            
+        	Set<Integer> resourceSet = new HashSet<>(); //Had weird error with constructor
+            for (int i : resources) {
+                resourceSet.add(i);
             }
+
             for (int hex : game.getBoard().getAdjacentHexesToNode(node)) {
-               resources.remove(game.getBoard().getHexTypeFromCoord(hex));
+               resourceSet.remove(game.getBoard().getHexTypeFromCoord(hex));
             }
-            if (resources.isEmpty()) nodes.add(node);
+            if (resourceSet.isEmpty()) nodes.add(node);
         }
 
         return nodes;
@@ -122,11 +125,11 @@ public class NDHelpers {
     public static int bestPossibleSettlement(SOCGame game, int playerNo, int[] resources) {
         Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
         
-        int best_node = possible_nodes.indexOf(0);
+        int best_node = possible_nodes.get(0);
 
         for (int i = 1; i < possible_nodes.size(); i++) {
-            if (compareSettlementOptions(best_node, possible_nodes.indexOf(i), game) < 0) {
-                best_node = possible_nodes.indexOf(i); 
+            if (NDRobotDM.totalProbabilityAtNode(game, best_node) > NDRobotDM.totalProbabilityAtNode(game, possible_nodes.get(i))) {
+                best_node = possible_nodes.get(i); 
             }
         }
         
@@ -146,7 +149,7 @@ public class NDHelpers {
         Vector<Integer> possibleRoads = new Vector<Integer>();
         
         for (int edge : game.getBoard().getAdjacentEdgesToEdge(edgeCoord)) {
-            if (NDRobotDM.canBuildRoad(game, edge, edgeCoord)) {
+            if (canBuildRoadTwo(game, edge, edgeCoord)) {
                 possibleRoads.add(edge);
             } 
         }
@@ -167,19 +170,20 @@ public class NDHelpers {
         // TODO maybe import ?
         Vector<SOCLRPathData> pathData = game.getPlayer(playerNo).getLRPaths();
 
-        /*for (SOCLRPathData path : pathData) {
+        for (SOCLRPathData path : pathData) {
             // check if can build off beginning
-            Vector<Integer> possibleFront = findPossibleRoads(path.getBeginning());
+
+            Vector<Integer> possibleFront = findPossibleRoads(game, path.getBeginning());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
-            if (possibleFront.size() != 0) return possibleFront.indexOf(0);
+            if (possibleFront.size() != 0) return possibleFront.get(0);
 
             // same but end...
-            Vector<Integer> possibleEnd = findPossibleRoads(path.getEnd());
+            Vector<Integer> possibleEnd = findPossibleRoads(game, path.getEnd());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
-            if (possibleEnd.size() != 0) return possibleEnd.indexOf(0);
-        }*/
+            if (possibleEnd.size() != 0) return possibleEnd.get(0);
+        }
         
         return -1;
     }
@@ -199,22 +203,22 @@ public class NDHelpers {
         
         return true;
     }
-    
-    /**
-     * Compares the potential location of two settlements based on the values of the hexes around them
-     * Does not check the validity of the settlements
-     * @param one
-     * @param two
-     * @return
-     */
-    public static int compareSettlementOptions(int one, int two, SOCGame game) {
-        if (NDRobotDM.totalProbabilityAtNode(game, one) > NDRobotDM.totalProbabilityAtNode(game, two)) {
-            return 1;
-        } else if (NDRobotDM.totalProbabilityAtNode(game, one) < NDRobotDM.totalProbabilityAtNode(game, two)) {
-            return -1;
+
+    public static boolean canBuildRoadTwo(SOCGame game, final int edgeCoord, final int sourceEdge) {
+        for (SOCRoutePiece r : game.getBoard().getRoadsAndShips()) {
+            if (edgeCoord == r.getCoordinates()) {
+                return false;
+            }
         }
 
-        return 0;
+        // TODO replace with a 'node on edges' method call
+        List<Integer> nodesOnEdgeOne = game.getBoard().getAdjacentNodesToEdge(edgeCoord);
+        List<Integer> nodesOnEdgeTwo = game.getBoard().getAdjacentNodesToEdge(sourceEdge);
+        Optional<Integer> connectingNode = nodesOnEdgeOne.stream().filter(nodesOnEdgeTwo::contains).findFirst();
+
+        if(!connectingNode.isPresent()) return false; // edges do not touch
+        
+        return true;
     }
 
 

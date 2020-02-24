@@ -4,10 +4,6 @@ import soc.game.*;
 import soc.robot.*;
 import soc.debug.D;
 
-
-// is this right way to import this TODO
-import NDRobotDM;
-
 import java.util.*;
 
 import static java.lang.Math.abs;
@@ -26,7 +22,7 @@ public class NDHelpers {
 
         /* Check diff in length */
         SOCPlayer ndBot = game.getPlayer(playerNo);
-        return abs(ndBot.getLongestRoadLength() - bestPlayer.getLongestRoadLength()) <= MAX_ROAD_DIFF;
+        return isLongestRoadPossible(game, playerNo) && abs(ndBot.getLongestRoadLength() - bestPlayer.getLongestRoadLength()) <= MAX_ROAD_DIFF;
     }
   
     /**
@@ -42,9 +38,7 @@ public class NDHelpers {
 
         /* Check diff in length */
         SOCPlayer ndBot = game.getPlayer(playerNo);
-        return abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= MAX_ARMY_DIFF;
-    }
-
+        return game.getNumDevCards() != 0 && abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= MAX_ARMY_DIFF;
     }
 
     /**
@@ -82,7 +76,7 @@ public class NDHelpers {
      * @return if there is a settlement that can yield these resources
      */
     public static boolean existsQualitySettlementFor(SOCGame game, int playerNo, int[] resources) {
-        return findPotentialSettlementFor(game, playerNo, resources) != -1;       
+        return !findPotentialSettlementsFor(game, playerNo, resources).isEmpty();       
     }
 
      /**
@@ -96,12 +90,15 @@ public class NDHelpers {
      * @param resources: int array where integers are SOCResourceConstant resource types
      * @return coords vector 
      */
-    public static Vector<int> findPotentialSettlementsFor(SOCGame game, int playerNo, int[] resources) {
+    public static Vector<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, int[] r) {
         
-        Vector<int> nodes = new Vector<int>();
+        Vector<Integer> nodes = new Vector<Integer>();
 
         for (int node : game.getPlayer(playerNo).getPotentialSettlements_arr()) {
-            Set<int> resources = new HashSet<>(Arrays.asList(resources);
+            Set<Integer> resources = new HashSet<>();//(Arrays.asList(r));
+            for (int i : r) {
+                resources.add(i);
+            }
             for (int hex : game.getBoard().getAdjacentHexesToNode(node)) {
                resources.remove(game.getBoard().getHexTypeFromCoord(hex));
             }
@@ -123,13 +120,13 @@ public class NDHelpers {
      *
      */
     public static int bestPossibleSettlement(SOCGame game, int playerNo, int[] resources) {
-        Vector<int> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
+        Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
         
-        int best_node = possible_nodes[0];
+        int best_node = possible_nodes.indexOf(0);
 
         for (int i = 1; i < possible_nodes.size(); i++) {
-            if (NDRobotDM.compareSettlements(best_node, possible_nodes[i]) < 0) {
-                best_node = possible_nodes[i]; 
+            if (compareSettlementOptions(best_node, possible_nodes.indexOf(i), game) < 0) {
+                best_node = possible_nodes.indexOf(i); 
             }
         }
         
@@ -144,9 +141,9 @@ public class NDHelpers {
      * @param edgeCoord edge to build off of
      * @return Vector of coords
      */
-    public static Vector<int> findPossibleRoads(SOCGame game, final int edgeCoord) {
+    public static Vector<Integer> findPossibleRoads(SOCGame game, final int edgeCoord) {
         
-        Vector<int> possibleRoads = new Vector<int>();
+        Vector<Integer> possibleRoads = new Vector<Integer>();
         
         for (int edge : game.getBoard().getAdjacentEdgesToEdge(edgeCoord)) {
             if (NDRobotDM.canBuildRoad(game, edge, edgeCoord)) {
@@ -170,19 +167,19 @@ public class NDHelpers {
         // TODO maybe import ?
         Vector<SOCLRPathData> pathData = game.getPlayer(playerNo).getLRPaths();
 
-        for (SOCLRPathData path : pathData) {
+        /*for (SOCLRPathData path : pathData) {
             // check if can build off beginning
-            Vector<int> possibleFront = findPossibleRoads(path.getBeginning());
+            Vector<Integer> possibleFront = findPossibleRoads(path.getBeginning());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
-            if (possibleFront.size() != 0) return possibleFront[0];
+            if (possibleFront.size() != 0) return possibleFront.indexOf(0);
 
             // same but end...
-            Vector<int> possibleEnd = findPossibleRoads(path.getEnd());
+            Vector<Integer> possibleEnd = findPossibleRoads(path.getEnd());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
-            if (possibleEnd.size() != 0) return possibleEnd[0];
-        }
+            if (possibleEnd.size() != 0) return possibleEnd.indexOf(0);
+        }*/
         
         return -1;
     }
@@ -199,7 +196,27 @@ public class NDHelpers {
      
         // here we know we are competitive... now lets see if we can reach
         //TODO try to build off getLRPaths()????
+        
+        return true;
     }
+    
+    /**
+     * Compares the potential location of two settlements based on the values of the hexes around them
+     * Does not check the validity of the settlements
+     * @param one
+     * @param two
+     * @return
+     */
+    public static int compareSettlementOptions(int one, int two, SOCGame game) {
+        if (NDRobotDM.totalProbabilityAtNode(game, one) > NDRobotDM.totalProbabilityAtNode(game, two)) {
+            return 1;
+        } else if (NDRobotDM.totalProbabilityAtNode(game, one) < NDRobotDM.totalProbabilityAtNode(game, two)) {
+            return -1;
+        }
+
+        return 0;
+    }
+
 
 
 }

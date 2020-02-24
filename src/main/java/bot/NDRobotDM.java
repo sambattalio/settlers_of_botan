@@ -106,7 +106,7 @@ public class NDRobotDM extends SOCRobotDM {
 
         // Cannot build a road through a settlement that is not ours
         SOCPlayingPiece settlement = game.getBoard().settlementAtNode(connectingNode.get());
-        if (settlement != null && !ourPlayerData.equals(settlement.getPlayer())) return false;
+        //if (settlement != null && !ourPlayerData.equals(settlement.getPlayer())) return false;
 
         return true;
     }

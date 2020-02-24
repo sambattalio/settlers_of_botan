@@ -42,4 +42,9 @@ Set the game parameters and start the game
 
 The bot chooses from three separate high level strategies. Based on path-finding algorithm, the bot first decides if it would like to win by obtaining the longest road. To achieve this goal, it will build roads in the direction most likely to gain it longest road and towards open spots that will provide more wood and brick to greater expand the road. If the bot determines that it is no longer possible or likely to win with longest road, it will switch to a Largest Army strategy. In this strategy, the bot will start buying development cards to gain knights. It will also prioritize road building toward open spots that would provide ore, sheep, and wheat. If the bot's army size falls too far behind another player's, the bot will switch to an expansion strategy. In this defaults strategy, the bot attempts to build as many settlements and cities as possible with little care about the spots they reside on. It will also prioritize buying development cards in order to gain vicotry points. The behavioral trees are depicted below. 
 
+Longest Road Strategy
 ![Longest Road](/img/LR.jpg)
+Largest Army Strategy
+![Largest Army](/img/LA.jpg)
+Default Expansion Strategy
+![Default](/img/Default.jpg)

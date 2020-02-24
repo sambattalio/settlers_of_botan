@@ -85,11 +85,12 @@ public class NDRobotDM extends SOCRobotDM {
     /**
      * Returns if legally possible to hypothetically place a road at edgeCoord
      *
+     * @param game
      * @param edgeCoord the edge to check
      * @param sourceEdge the edge that we have gotten to this node from
      * @return if there is no road already there
      */
-    public boolean canBuildRoad(final int edgeCoord, final int sourceEdge) {
+    public static boolean canBuildRoad(SOCGame game, final int edgeCoord, final int sourceEdge) {
         for (SOCRoutePiece r : game.getBoard().getRoadsAndShips()) {
             if (edgeCoord == r.getCoordinates()) {
                 return false;
@@ -109,6 +110,7 @@ public class NDRobotDM extends SOCRobotDM {
 
         return true;
     }
+
 
     /**
      * Returns the sum of the probabilities of the tiles surrounding a node
@@ -172,7 +174,7 @@ public class NDRobotDM extends SOCRobotDM {
             for (int edge : game.getBoard().getAdjacentEdgesToEdge(current.lastElement())) {
                 D.ebugPrintln("Adjacent edge to " + current.lastElement() + ": " + edge);
                 boolean isLoop = current.contains(edge);
-                if (canBuildRoad(edge, current.lastElement()) && !isLoop) {
+                if (canBuildRoad(game, edge, current.lastElement()) && !isLoop) {
                     D.ebugPrintln("Can build road on " + edge);
                     Vector<Integer> newPath = new Vector<>(current);
                     newPath.add(edge);

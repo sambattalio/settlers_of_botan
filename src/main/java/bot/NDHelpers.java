@@ -86,7 +86,7 @@ public class NDHelpers {
     }
 
      /**
-     * Returns coord of settlement that will yield the resources in the set
+     * Returns coords of settlements that will yield the resources in the set
      *
      * TODO maybe ports too?
      * Right now only handles arrays up to size 3
@@ -94,21 +94,98 @@ public class NDHelpers {
      * @param game
      * @param playerNo
      * @param resources: int array where integers are SOCResourceConstant resource types
-     * @return coord if there is a settlement that can yield these resources else -1
+     * @return coords vector 
      */
-    public static int findPotentialSettlementFor(SOCGame game, int playerNo, int[] resources) {
+    public static Vector<int> findPotentialSettlementsFor(SOCGame game, int playerNo, int[] resources) {
         
+        Vector<int> nodes = new Vector<int>();
+
         for (int node : game.getPlayer(playerNo).getPotentialSettlements_arr()) {
             Set<int> resources = new HashSet<>(Arrays.asList(resources);
             for (int hex : game.getBoard().getAdjacentHexesToNode(node)) {
                resources.remove(game.getBoard().getHexTypeFromCoord(hex));
             }
-            if (resources.isEmpty()) return node;
+            if (resources.isEmpty()) nodes.add(node);
         }
 
-        return -1;
+        return nodes;
     }
 
+
+     /**
+     * Returns *coord* of the best possible settlement for given resources
+     *
+     * @param board
+     * @param playerNo
+     * @param resources
+     *
+     * @return coord of best settlement
+     *
+     */
+    public static int bestPossibleSettlement(SOCGame game, int playerNo, int[] resources) {
+        Vector<int> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
+        
+        int best_node = possible_nodes[0];
+
+        for (int i = 1; i < possible_nodes.size(); i++) {
+            if (NDRobotDM.compareSettlements(best_node, possible_nodes[i]) < 0) {
+                best_node = possible_nodes[i]; 
+            }
+        }
+        
+        return best_node;
+    }
+
+
+    /**
+     * Finds possible roads that can be built from given coord
+     *
+     * @param game
+     * @param edgeCoord edge to build off of
+     * @return Vector of coords
+     */
+    public static Vector<int> findPossibleRoads(SOCGame game, final int edgeCoord) {
+        
+        Vector<int> possibleRoads = new Vector<int>();
+        
+        for (int edge : game.getBoard().getAdjacentEdgesToEdge(edgeCoord)) {
+            if (NDRobotDM.canBuildRoad(game, edge, edgeCoord)) {
+                possibleRoads.add(edge);
+            } 
+        }
+
+        return possibleRoads;
+    }
+
+    /**
+     * Returns coord of best possible road to place to maximize length
+     *
+     * @param game
+     * @param playerNo
+     * @return coord of best road to build
+     */
+    public static int bestPossibleLongRoad(SOCGame game, int playerNo) {
+        // for now the strat is to try to build off of the longest road(s)
+        // of the player
+        // TODO maybe import ?
+        Vector<SOCLRPathData> pathData = game.getPlayer(playerNo).getLRPaths();
+
+        for (SOCLRPathData path : pathData) {
+            // check if can build off beginning
+            Vector<int> possibleFront = findPossibleRoads(path.getBeginning());
+            // for now just return the first possible... later we need to prolly
+            // search this shizz our
+            if (possibleFront.size() != 0) return possibleFront[0];
+
+            // same but end...
+            Vector<int> possibleEnd = findPossibleRoads(path.getEnd());
+            // for now just return the first possible... later we need to prolly
+            // search this shizz our
+            if (possibleEnd.size() != 0) return possibleEnd[0];
+        }
+        
+        return -1;
+    }
 
     /**
      * Returns if longest road is possible to build

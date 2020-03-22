@@ -182,6 +182,35 @@ public class NDHelpers {
     }
 
     /**
+     * Try to trade for resources
+     *
+     * @param game
+     * @param playerNo
+     * @param give
+     * @param get
+     * @return void
+     */
+    public static void setPlayersOffer(SOCGame game, int playerNo, SOCResourceSet give, SOCResourceSet get) {
+      // make an array to yeet trade to everyone
+      boolean[] players_to_offer = new boolean[game.maxPlayers];
+      Arrays.fill(players_to_offer, true);
+      players_to_offer[playerNo] = false; // don't offer self
+
+      game.getPlayer(playerNo).setCurrentOffer(SOCTradeOffer(game, playerNo, players_to_offer, give, get));
+    }
+
+    /**
+     * Clears current offer
+     *
+     * @param game
+     * @param playerNo
+     * @return void
+     */
+    public static void clearPlayersOffer(SOCGame game, int playerNo) {
+       game.getPlayer(playerNo).setCurrentOffer(null);
+    }
+
+    /**
      * Returns if longest road is possible to build
      *
      * @param game

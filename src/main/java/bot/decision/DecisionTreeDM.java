@@ -13,9 +13,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class DecisionTreeDM extends SOCRobotDM {
-
+	private SOCRobotBrain brain;
+	
     public DecisionTreeDM(SOCRobotBrain br) {
         super(br);
+        
+        brain = br;
     }
 
     @Override
@@ -27,6 +30,10 @@ public class DecisionTreeDM extends SOCRobotDM {
         } else {
             addToPlan(DefaultStrategy.plan(this));
         }
+    }
+    
+    public SOCRobotBrain getBrain() {
+    	return brain;
     }
 
     protected void addToPlan(SOCPossiblePiece piece) {
@@ -46,6 +53,10 @@ public class DecisionTreeDM extends SOCRobotDM {
 
         private DecisionTreeHelpers() {
 
+        }
+        
+        public ResourceSet getPlayerResources() {
+        	return brain.getOurPlayerData().getResources();
         }
 
         public boolean haveResourcesForRoadAndSettlement() {

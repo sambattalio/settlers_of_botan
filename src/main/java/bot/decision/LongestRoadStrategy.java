@@ -20,18 +20,20 @@ import static soc.robot.SOCPossiblePiece.ROAD;
 import static soc.robot.SOCPossiblePiece.CITY;
 import static soc.robot.SOCPossiblePiece.CARD;
 
-//import bot.NDHelpers;
+import bot.trade.Trading;
 
 public class LongestRoadStrategy {
 
     public static boolean shouldUse(SOCGame game, SOCPlayer player) {
-        return NDHelpers.isCompetitiveForLongestRoad(game, player.getPlayerNumber());
-    }
+        return NDHelpers.isLongestRoadPossible(game, player.getPlayerNumber());
+    };
 
     public static SOCPossiblePiece plan(DecisionTreeDM decisionTreeDM) {
         Optional<SOCPossibleSettlement> possibleSettlement;
         Optional<SOCPossibleCity> possibleCity;
-
+	
+	Trading trades = new Trading(decisionTreeDM.getBrain());
+    
         //TODO Check if road is threatened before performing other actions
         if (decisionTreeDM.getHelpers().haveResourcesForRoadAndSettlement()) {
             return decisionTreeDM.getHelpers().findQualityRoad(true).orElse(null);
@@ -42,7 +44,9 @@ public class LongestRoadStrategy {
             } else {
                 return decisionTreeDM.getHelpers().findQualityRoad(true).orElse(null);
             }
-        } else if (decisionTreeDM.getHelpers().haveResourcesFor(ROAD)) {
+        } /*else if(trades.makeSuccessfulTrade()) {
+	    
+	} */else if (decisionTreeDM.getHelpers().haveResourcesFor(ROAD)) {
             return decisionTreeDM.getHelpers().findQualityRoad(true).orElse(null);
         } else if (decisionTreeDM.getHelpers().haveResourcesFor(CITY) &&
                 (possibleCity = decisionTreeDM.getHelpers().findQualityCityFor(Arrays.asList(WOOD, CLAY))).isPresent()) {

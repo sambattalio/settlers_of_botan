@@ -2,8 +2,10 @@ package bot.decision;
 
 import bot.NDRobotDM;
 import bot.NDHelpers;
+import bot.trade.Trading;
 import soc.game.*;
 import soc.robot.*;
+import bot.*;
 
 import javax.swing.text.html.Option;
 import java.util.*;
@@ -13,11 +15,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class DecisionTreeDM extends SOCRobotDM {
-	private SOCRobotBrain brain;
+	private NDRobotBrain brain;
+
+	private Trading trades;
 	
-    public DecisionTreeDM(SOCRobotBrain br) {
+    public DecisionTreeDM(NDRobotBrain br) {
         super(br);
         
+        trades = new Trading(br);
         brain = br;
     }
 
@@ -34,6 +39,10 @@ public class DecisionTreeDM extends SOCRobotDM {
     
     public SOCRobotBrain getBrain() {
     	return brain;
+    }
+    
+    public Trading getTrades() {
+    	return trades;
     }
 
     protected void addToPlan(SOCPossiblePiece piece) {

@@ -118,6 +118,10 @@ public class NDHelpers {
         int playerNo = player.getPlayerNumber();
     	Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
         
+    	if(possible_nodes.size() <= 0) {
+    		return null;
+    	}
+    	
         int bestNode = possible_nodes.get(0);
 
         for (int i = 1; i < possible_nodes.size(); i++) {

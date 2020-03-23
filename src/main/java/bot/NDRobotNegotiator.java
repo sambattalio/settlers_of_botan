@@ -1,7 +1,10 @@
 package bot;
 
-import soc.robot.SOCRobotBrain;
-import soc.robot.SOCRobotNegotiator;
+import soc.game.*;
+import soc.robot.*;
+import soc.debug.D;
+
+import java.util.*;
 
 public class NDRobotNegotiator extends SOCRobotNegotiator {
 

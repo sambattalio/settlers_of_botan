@@ -33,6 +33,8 @@ public class LargestArmyStrategy {
             return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
         } else if (decisionTreeDM.getHelpers().haveResourcesForRoadAndSettlement()) {
             return decisionTreeDM.getHelpers().findQualityRoad(false).orElse(null);
+        } else if (decisionTreeDM.getHelpers().haveResourcesForRoadAndSettlement()) {
+            return decisionTreeDM.getHelpers().findQualityRoad(false).orElse(null);
         } else if (decisionTreeDM.getHelpers().haveResourcesFor(SETTLEMENT)) {
             if (decisionTreeDM.getHelpers().canBuildSettlement() &&
                     (possibleSettlement = decisionTreeDM.getHelpers().findQualitySettlementFor(Arrays.asList(WHEAT, ORE, SHEEP))).isPresent()) {

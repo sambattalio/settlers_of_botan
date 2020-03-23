@@ -54,6 +54,7 @@ public class NDRobotClient extends SOCRobotClient {
         return feats;
     }
 
+	@Override
     public SOCRobotBrain createBrain(final SOCRobotParameters params, final SOCGame ga, final CappedQueue<SOCMessage> mq) {
 		return new NDRobotBrain(this, params, ga, mq);
     }

@@ -1,6 +1,8 @@
 package bot;
 
 import bot.decision.DecisionTreeDM;
+import bot.trade.Trading;
+
 import soc.game.SOCGame;
 import soc.message.SOCMessage;
 import soc.robot.SOCRobotBrain;
@@ -20,12 +22,22 @@ public class NDRobotBrain extends SOCRobotBrain {
         super.setOurPlayerData();
 
         decisionMaker = new DecisionTreeDM(this);
-        negotiator = new NDRobotNegotiator(this);
+        negotiator = new Trading(this);
         monopolyStrategy = new NDMonopolyStrategy(game, ourPlayerData);
         robberStrategy = new NDRobberStrategy(game, ourPlayerData, this, rand);
         discardStrategy = new NDDiscardStrategy(game, ourPlayerData, this, rand);
         openingBuildStrategy = new NDOpeningBuildStrategy(game, ourPlayerData);
     }
-
-
+     
+    public void setWaitingResponse(boolean b) {
+    	waitingForTradeResponse = b;
+    }
+    
+    public void setTradeResponseTime(int i) {
+    	tradeResponseTimeoutSec = i;
+    }
+    
+    public void setCounter(int i) {
+    	counter = i;
+    }
 }

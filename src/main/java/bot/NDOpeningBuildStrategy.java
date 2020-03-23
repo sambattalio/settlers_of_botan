@@ -83,6 +83,13 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
         return nodeStats.subList(0, n); 
     }
 
+    public int closestRoadToNode(int source, int target) {
+        Comparator<Integer> comparator = Comparator.comparing(edge -> Math.abs(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, target) - target));
+        return game.getBoard().getAdjacentEdgesToNode(source).stream()
+                   .min(comparator).orElse(-1);
+    }
+
+
     public int planInitialSettlements() {
         // the plan for the first one... find the BEST node possible
         firstSettlement = getBestNode();
@@ -90,16 +97,6 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
         firstResources = NDHelpers.findResourcesFromCoord(this.game, firstSettlement);
 
         return firstSettlement;
-    }
-
-    
-    public int closestRoadToNode(int target, Vector<Integer> roadEdges) {
-        int minDistance;
-
-        for (Integer coord : roadEdges) {
-            int dist = coord - target;
-        }
-
     }
 
     public int planInitRoad() {
@@ -113,18 +110,14 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
         if (ourPlayerData.getSettlements().size() > 1) {
             // set destination node to not the one just placed
             nextNode = settlements.get(0).getCoordinates() == settlementNode ? settlements.get(1).getCoordinates() : settlements.get(0).getCoordinates();
-            //newRoad  = roadsToBuild.get(roadsToBuild.size() - 1);
-            Vector<Integer> shortestPath = NDHelpers.BFSToCoord(game, settlementNode, nextNode);
-            newRoad = shortestPath.get(1);
         } else {
             nextNode = bestSecondSettlement();
-            newRoad = NDHelpers.BFSToCoord(game, settlementNode, nextNode).get(1);
         }
 
         // develop path to hypothetical next node... and place road on first option 
         plannedRoadDestinationNode = nextNode;
 
-        return newRoad;
+        return closestRoadToNode(settlementNode, nextNode);
     }
 
     public int bestSecondSettlement() {

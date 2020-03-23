@@ -17,6 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 
 public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
 
@@ -25,8 +28,10 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
     private final int MIN_LENGTH_FOR_LONGEST = 5;
 
     private final static int[] NODE_2_AWAY = { -9, 0x02, 0x22, 0x20, -0x02, -0x22, -0x20 };
-
     private final static int[] NODE_3_AWAY = { -9, 0x03, 0x33, 0x30, -0x03, -0x33, -0x30 };
+    private final static int[] NODE_4_AWAY = { -9, 0x04, 0x44, 0x40, -0x04, -0x44, -0x40 };
+
+    private int roadToBuild;
 
     /**
      * Create an OpeningBuildStrategy for a {@link NDRobotBrain}'s player.
@@ -63,6 +68,7 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
     private List<Pair<Integer, Integer>> getTopNNodes(int n) {
         int bestNode = -1;
         int bestNodeProb = -1;
+        D.ebugPrintln("start topnnodes");
 
         ArrayList<Pair<Integer, Integer>> nodeStats = new ArrayList<Pair<Integer, Integer>>();
 
@@ -74,6 +80,7 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
         // sort and yeet out top N
         Collections.sort(nodeStats, Comparator.comparing(p -> -p.getValue()));
 
+        D.ebugPrintln("end topnnodes");
         return nodeStats.subList(0, n); 
     }
 
@@ -88,7 +95,7 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
 
         return firstSettlement;
     }
-
+    /*
     public int planInitRoad() {
         int settlementNode = ourPlayerData.getLastSettlementCoord();
         int nextNode;
@@ -106,26 +113,27 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
         plannedRoadDestinationNode = nextNode;
 
         // todo do facing / coordinate bitmapping to do this instead of BFS
-        Vector<Integer> path = NDHelpers.BFSToCoord(this.game, settlementNode, plannedRoadDestinationNode);
+        //Vector<Integer> path = NDHelpers.BFSToCoord(this.game, settlementNode, plannedRoadDestinationNode);
+        //return path.get(1);
+        return game.getBoard().getAdjacentEdgesToNode(settlementNode).get(0);
+    }
+    */
 
-        // return first road from BFS to coordinate
-        if (path.size() < 2) return -1;
-
-        D.ebugPrintln("Here..." + path.get(1));
-        return path.get(1);        
+    public int planInitRoad() {
+        int settlementNode = ourPlayerData.getLastSettlementCoord();
+        return game.getBoard().getAdjacentEdgesToNode(settlementNode).get(0);
     }
 
-
-    // copied from SOCBoard and modified
-    public boolean isNodeMoreThan4AwayFromNode(final int n1, final int n2)
+    public boolean isNode234AwayFromNode(final int n1, final int n2)
     {
         final int d = n2 - n1;
-        D.ebugPrintln("D: " + d + " " + d / 10 + " " + d % 10);
-
-        if (d / 10 > 3 || d % 10 > 3) return true;
+        for (int facing = 1; facing <= 6; ++facing)
+        {
+            if (d == NODE_2_AWAY[facing] || d == NODE_3_AWAY[facing] || d == NODE_4_AWAY[facing])
+                return true;
+        }
         return false;
     }
-
 
     public int bestSecondSettlement() {
         // look at 5 "best" nodes left over, and compare resources to determine where to go
@@ -135,6 +143,7 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
 
         Vector<Pair<Integer, Integer>> longRoads = new Vector<Pair<Integer, Integer>>();
         Vector<Pair<Integer, Integer>> develCoords = new Vector<Pair<Integer, Integer>>();
+        Vector<Pair<Integer, Integer>> leftoverAdjusted = new Vector<Pair<Integer, Integer>>();
         // find distance to top 5, keeping those at or above minimium distance
         for (Pair<Integer, Integer> node : nodes) {
             SOCResourceSet resourcesAtCoord = NDHelpers.findResourcesFromCoord(this.game, node.getKey());
@@ -142,24 +151,29 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
             // add in first node's resources
             resourcesAtCoord.add(firstResources);
             D.ebugPrintln("potential resources: " + resourcesAtCoord.toString());
-            if (isNodeMoreThan4AwayFromNode(firstSettlement, node.getKey()) && resourcesAtCoord.contains(NDHelpers.ROAD_SET)) {
-                longRoads.add(node);
+            Vector<Integer> shortestPath = NDHelpers.BFSToCoord(game, firstSettlement, node.getKey());
+            if (shortestPath.size() >= MIN_LENGTH_FOR_LONGEST && resourcesAtCoord.contains(NDHelpers.ROAD_SET)) {
+                longRoads.add(new Pair<Integer, Integer>(node.getKey(), shortestPath.get(1)));
             }
             if (resourcesAtCoord.contains(NDHelpers.DEVEL_SET)) {
-                develCoords.add(node);
+                develCoords.add(new Pair<Integer, Integer>(node.getKey(), shortestPath.get(1)));
             }
+            leftoverAdjusted.add(new Pair<Integer, Integer>(node.getKey(), shortestPath.get(1)));
         }
 
         // Pick either the best (first b/c sorted on probability) or search for development card locations
         if (longRoads.size() > 0) {
             D.ebugPrintln("Placing second for longest road");
             secondSettlement = longRoads.get(0).getKey();
+            roadToBuild = longRoads.get(0).getValue();
         } else if (develCoords.size() > 0) {
             D.ebugPrintln("Placing second for development cards");
             secondSettlement = develCoords.get(0).getKey();
+            roadToBuild = develCoords.get(0).getValue();
         } else {
             D.ebugPrintln("Placing second for best resources");
-            secondSettlement = nodes.get(0).getKey();
+            secondSettlement = leftoverAdjusted.get(0).getKey();
+            roadToBuild = leftoverAdjusted.get(0).getValue();
         }
         return secondSettlement;
     }

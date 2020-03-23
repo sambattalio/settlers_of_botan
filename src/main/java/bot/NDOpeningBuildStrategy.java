@@ -2,13 +2,8 @@ package bot;
 
 import soc.game.SOCGame;
 import soc.game.SOCPlayer;
-import soc.game.SOCBoard;
-import soc.game.SOCSettlement;
 import soc.game.SOCResourceSet;
 import soc.robot.OpeningBuildStrategy;
-import soc.robot.SOCRobotBrain;
-import bot.NDHelpers;
-import bot.NDRobotDM;
 import soc.debug.D;
 
 import java.util.Vector;
@@ -17,9 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Arrays;
 
 public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
 
@@ -54,7 +46,7 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
         int bestNodeProb = -1;
 
         for (int node : this.ourPlayerData.getPotentialSettlements()) {
-            int probability = NDRobotDM.totalProbabilityAtNode(this.game, node);
+            int probability = NDHelpers.totalProbabilityAtNode(this.game, node);
 
             if (probability > bestNodeProb) {
                 bestNodeProb = probability;
@@ -73,7 +65,7 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
         ArrayList<Pair<Integer, Integer>> nodeStats = new ArrayList<Pair<Integer, Integer>>();
 
         for (int node : this.ourPlayerData.getPotentialSettlements()) {
-            int probability = NDRobotDM.totalProbabilityAtNode(this.game, node);
+            int probability = NDHelpers.totalProbabilityAtNode(this.game, node);
             nodeStats.add(new Pair<Integer, Integer>(node, probability));
         }
 

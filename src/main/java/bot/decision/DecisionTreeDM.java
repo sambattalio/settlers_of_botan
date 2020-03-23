@@ -94,12 +94,26 @@ public class DecisionTreeDM extends SOCRobotDM {
         }
 
         public Optional<SOCPossibleSettlement> findQualitySettlementFor(List<Integer> resources) {
-            return Optional.ofNullable(NDHelpers.bestPossibleSettlement(brain.getGame(), brain.getOurPlayerData(), resources));
+            return Optional.of(NDHelpers.bestPossibleSettlement(brain.getGame(), brain.getOurPlayerData(), resources));
         }
 
         public Optional<SOCPossibleCity> findQualityCityFor(List<Integer> resources) {
-        	//TODO Upgrade settlements to cities
-            return Optional.empty();
+            Vector<SOCSettlement> ourSettlements = brain.getOurPlayerData().getSettlements();
+            if(resources.isEmpty()) {
+                return ourSettlements.stream()
+                        .map(SOCPlayingPiece::getCoordinates)
+                        .sorted(Comparator.comparing(node -> NDHelpers.totalProbabilityAtNode(game, node)))
+                        .map(node -> new SOCPossibleCity(brain.getOurPlayerData(), node))
+                        .findFirst();
+            }
+            return ourSettlements.stream()
+                    .filter(settlement -> settlement.getAdjacentHexes().stream()
+                            .anyMatch(hex -> resources.contains(brain.getGame().getBoard().getHexTypeFromCoord(hex)))
+                    )
+                    .map(SOCPlayingPiece::getCoordinates)
+                    .sorted(Comparator.comparing(node -> NDHelpers.totalProbabilityAtNode(game, node)))
+                    .map(node -> new SOCPossibleCity(brain.getOurPlayerData(), node))
+                    .findFirst();
         }
 
         public Optional<SOCPossibleSettlement> findQualitySettlement() {
@@ -115,89 +129,4 @@ public class DecisionTreeDM extends SOCRobotDM {
             else return Optional.empty(); //TODO add quality road search based on resources like with settlements & cities
         }
     }
-}
-
-class Utility {
-
-//    protected SOCPossibleSettlement findBestSettlement(DecisionBlackboard blackboard) {
-//        Set<Integer> blockedNodes = Stream.concat(
-//                    blackboard.getBoard().getSettlements().stream()
-//                        .filter(settlement -> settlement.getPlayerNumber() != blackboard.getPlayerData().getPlayerNumber())
-//                        .map(SOCPlayingPiece::getCoordinates),
-//                    blackboard.getBoard().getSettlements().stream()
-//                        .filter(settlement -> settlement.getPlayerNumber() == blackboard.getPlayerData().getPlayerNumber())
-//                        .map(SOCPlayingPiece::getCoordinates)
-//                )
-//                .flatMap(coord -> Stream.concat(Stream.of(coord), blackboard.getBoard().getAdjacentNodesToNode(coord).stream()))
-//                .collect(Collectors.toSet());
-//
-//        return blackboard.getPlayerData().getPieces().stream()
-//                .filter(piece -> piece.getType() == SOCPlayingPiece.ROAD)
-//                .map(SOCPlayingPiece::getCoordinates)
-//                .flatMap(coordinate -> blackboard.getBoard().getAdjacentNodesToEdge(coordinate).stream())
-//                .filter(blockedNodes::contains)
-//                .max(Comparator.comparing(settlement -> NDRobotDM.totalProbabilityAtNode(blackboard.getGame(), settlement)))
-//                .map(settlement -> new SOCPossibleSettlement(blackboard.getPlayerData(), settlement, null))
-//                .orElse(null);
-//    }
-//
-//    private List<SOCPlayingPiece> findBest(int startingNode, Set<SOCPlayingPiece> unusedRoads, Set<Integer> occupiedNodes, DecisionBlackboard blackboard) {
-//        return blackboard.getBoard().getAdjacentEdgesToNode(startingNode).stream()
-//                .filter(edge -> !occupiedNodes.contains(edge))
-//                .map(edge -> {
-//                    List<SOCPlayingPiece> best = new ArrayList<>();
-//                    int nextNode = blackboard.getBoard().getAdjacentNodesToEdge(edge).stream()
-//                            .filter(node -> node != startingNode)
-//                            .findFirst()
-//                            .orElseThrow(NullPointerException::new);
-//                    if (unusedRoads.contains(edge)) {
-//                        Set<SOCPlayingPiece> newUnusedRoads = new HashSet<>(unusedRoads);
-//                        SOCPlayingPiece edgePiece = newUnusedRoads.stream()
-//                                .filter(road -> road.getCoordinates() == edge)
-//                                .findFirst()
-//                                .orElse(null);
-//                        newUnusedRoads.remove(edgePiece);
-//                        best.add(edgePiece);
-//                        if (!occupiedNodes.contains(nextNode)) {
-//                            best.addAll(findBest(nextNode, newUnusedRoads, occupiedNodes, blackboard));
-//                        }
-//                    }
-//
-//                    return best;
-//                }).max(Comparator.comparing(List::size))
-//                .orElse(new ArrayList<>());
-//    }
-//
-//
-//    protected List<SOCPlayingPiece> findLongestRoad(DecisionBlackboard blackboard) {
-//        Set<SOCPlayingPiece> currentRoads = blackboard.getPlayerData().getPieces().stream()
-//                .filter(piece -> piece.getType() == SOCPlayingPiece.ROAD)
-//                .collect(Collectors.toSet());
-//
-//        Set<Integer> blockedNodes = blackboard.getBoard().getSettlements().stream()
-//                .filter(settlement -> settlement.getPlayerNumber() != blackboard.getPlayerData().getPlayerNumber())
-//                .map(SOCPlayingPiece::getCoordinates)
-//                .collect(Collectors.toSet());
-//
-//        Set<Integer> startingNodes = currentRoads.stream()
-//                .map(SOCPlayingPiece::getCoordinates)
-//                .flatMap(coordinate -> blackboard.getBoard().getAdjacentNodesToEdge(coordinate).stream())
-//                .filter(blockedNodes::contains)
-//                .collect(Collectors.toSet());
-//
-//        return startingNodes.stream()
-//                .map(startingNode -> findBest(startingNode, currentRoads, blockedNodes, blackboard))
-//                .max(Comparator.comparing(Collection::size))
-//                .orElse(null);
-//    }
-//
-//    protected SOCPossiblePiece findBestCity(DecisionBlackboard blackboard) {
-//        Function<SOCPlayingPiece, Integer> f = settlement -> NDRobotDM.totalProbabilityAtNode(blackboard.getGame(), settlement.getCoordinates());
-//        return blackboard.getPlayerData().getPieces().stream()
-//                .filter(p -> p.getType() == SOCPlayingPiece.SETTLEMENT)
-//                .max(Comparator.comparing(f))
-//                .map(SOCPlayingPiece::getCoordinates)
-//                .map(settlement -> new SOCPossibleCity(blackboard.getPlayerData(), settlement))
-//                .orElse(null);
-//    }
 }

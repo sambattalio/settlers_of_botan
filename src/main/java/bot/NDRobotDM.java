@@ -111,27 +111,6 @@ public class NDRobotDM extends SOCRobotDM {
         return true;
     }
 
-
-    /**
-     * Returns the sum of the probabilities of the tiles surrounding a node
-     *
-     * @param game the game board
-     * @param nodeCoord the node to check
-     * @return the total probability
-     */
-    public static int totalProbabilityAtNode(SOCGame game, final int nodeCoord) {
-        int sum = 0;
-        for (int hexCoord : game.getBoard().getAdjacentHexesToNode(nodeCoord)) {
-            int diceNumber = game.getBoard().getNumberOnHexFromCoord(hexCoord);
-            // skip water
-            if (diceNumber > 12 || diceNumber <= 0) continue;
-            sum += (diceNumber > 7) ? 13 - diceNumber : diceNumber - 1;
-        }
-        D.ebugPrintln("Sum at node " + nodeCoord + " was " + String.valueOf(sum));
-
-        return sum;
-    }
-
     /**
      * Returns an "optimal" path to a new settlement from the starting edge coordinate
      *
@@ -223,9 +202,9 @@ public class NDRobotDM extends SOCRobotDM {
      * @return
      */
     public static int compareSettlements(SOCGame game, int one, int two) {
-        if (totalProbabilityAtNode(game, one) > totalProbabilityAtNode(game, two)) {
+        if (NDHelpers.totalProbabilityAtNode(game, one) > NDHelpers.totalProbabilityAtNode(game, two)) {
             return 1;
-        } else if (totalProbabilityAtNode(game, one) < totalProbabilityAtNode(game, two)) {
+        } else if (NDHelpers.totalProbabilityAtNode(game, one) < NDHelpers.totalProbabilityAtNode(game, two)) {
             return -1;
         }
 
@@ -233,7 +212,7 @@ public class NDRobotDM extends SOCRobotDM {
     }
 
     private int compareSettlements(int one, int two) {
-        return this.compareSettlements(this.game, one, two);
+        return compareSettlements(this.game, one, two);
     }
 
 

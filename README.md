@@ -37,6 +37,14 @@ Name your player `debug`
 
 Set the game parameters and start the game
 
+## Initial Settlement / Road Placement
+
+Our implementation choses the first settlement placement as the node that has the maximum total probability of gaining 
+resources and the road off of that is placed as the one pointing towards where we think the next settlement will be placed 
+even though that can change. The second settlement placement selects the top five probability nodes that are possible to build 
+on, then compares them in a similar fashion to our high-level strategy. This means that it first sees how good each option is 
+for constructing the longest road, then development points, then overall development. The road off of that is then placed 
+again in the direction of the first settlement so that the two may more easily be connected.
 
 ## Behavioral Tree Setup
 

@@ -33,13 +33,13 @@ public class NDRobotDM extends SOCRobotDM {
             SOCPlayingPiece piece = i.next();
             // look for ways to build off of any placed roads using BFS and resource odds
             if (piece.getType() == SOCPlayingPiece.ROAD) {
-                Vector<Integer> searchResult = BFS(piece.getCoordinates());
+                Vector<Integer> searchResult = BFS(this.game, piece.getCoordinates());
                 //TODO refactor to pass in best path in some form so that even less is explored, and to take in nodes instead of edges
                 D.ebugPrintln("Best on edge " + piece.getCoordinates() + " was " + searchResult);
                 // has pre-existing road first so we remove it
                 if (searchResult.size() > 0) searchResult.removeElementAt(0);
                 // Check if better than the best path
-                if (comparePaths(searchResult, bestPath) > 0) {
+                if (comparePaths(this.game, searchResult, bestPath) > 0) {
                     bestPath = searchResult;
                     D.ebugPrintln("Best path set:" + bestPath.toString());
                 }
@@ -90,7 +90,7 @@ public class NDRobotDM extends SOCRobotDM {
      * @param sourceEdge the edge that we have gotten to this node from
      * @return if there is no road already there
      */
-    public boolean canBuildRoad(SOCGame game, final int edgeCoord, final int sourceEdge) {
+    public static boolean canBuildRoad(SOCGame game, final int edgeCoord, final int sourceEdge) {
         for (SOCRoutePiece r : game.getBoard().getRoadsAndShips()) {
             if (edgeCoord == r.getCoordinates()) {
                 return false;
@@ -111,27 +111,6 @@ public class NDRobotDM extends SOCRobotDM {
         return true;
     }
 
-
-    /**
-     * Returns the sum of the probabilities of the tiles surrounding a node
-     *
-     * @param game the game board
-     * @param nodeCoord the node to check
-     * @return the total probability
-     */
-    public static int totalProbabilityAtNode(SOCGame game, final int nodeCoord) {
-        int sum = 0;
-        for (int hexCoord : game.getBoard().getAdjacentHexesToNode(nodeCoord)) {
-            int diceNumber = game.getBoard().getNumberOnHexFromCoord(hexCoord);
-            // skip water
-            if (diceNumber > 12 || diceNumber <= 0) continue;
-            sum += (diceNumber > 7) ? 13 - diceNumber : diceNumber - 1;
-        }
-        D.ebugPrintln("Sum at node " + nodeCoord + " was " + String.valueOf(sum));
-
-        return sum;
-    }
-
     /**
      * Returns an "optimal" path to a new settlement from the starting edge coordinate
      *
@@ -139,7 +118,7 @@ public class NDRobotDM extends SOCRobotDM {
      * @return a vector of coordinates starting with the existing road and ending with the optimal settlement
      * @see NDRobotDM::comparePath the comparison to use
      */
-    public Vector<Integer> BFS(int coord) {
+    public static Vector<Integer> BFS(SOCGame game, int coord) {
         Queue<Vector<Integer>> queue = new LinkedList<>();
 
         // push initial coord
@@ -163,7 +142,7 @@ public class NDRobotDM extends SOCRobotDM {
                     Vector<Integer> next = new Vector<>(current);
                     // add the settlement to the end of the path leading here
                     next.add(node);
-                    if (comparePaths(next, bestPath) > 0) {
+                    if (comparePaths(game, next, bestPath) > 0) {
                         bestPath = next;
                         D.ebugPrintln("Best so far was: " + bestPath.toString());
                     }
@@ -195,7 +174,7 @@ public class NDRobotDM extends SOCRobotDM {
      * @param two the second path
      * @return a positive if the first path is better, or a negative if the second path is better
      */
-    private int comparePaths(Vector<Integer> one, Vector<Integer> two) {
+    public static int comparePaths(SOCGame game, Vector<Integer> one, Vector<Integer> two) {
         if (two.size() == 0) {
             return 4;
         } else if (one.size() == 0) {
@@ -208,7 +187,7 @@ public class NDRobotDM extends SOCRobotDM {
             return -2;
         }
 
-        int x = compareSettlements(one.lastElement(), two.lastElement());
+        int x = compareSettlements(game, one.lastElement(), two.lastElement());
         if (x != 0) return x;
 
         return -1;
@@ -222,14 +201,18 @@ public class NDRobotDM extends SOCRobotDM {
      * @param two
      * @return
      */
-    private int compareSettlements(int one, int two) {
-        if (totalProbabilityAtNode(game, one) > totalProbabilityAtNode(game, two)) {
+    public static int compareSettlements(SOCGame game, int one, int two) {
+        if (NDHelpers.totalProbabilityAtNode(game, one) > NDHelpers.totalProbabilityAtNode(game, two)) {
             return 1;
-        } else if (totalProbabilityAtNode(game, one) < totalProbabilityAtNode(game, two)) {
+        } else if (NDHelpers.totalProbabilityAtNode(game, one) < NDHelpers.totalProbabilityAtNode(game, two)) {
             return -1;
         }
 
         return 0;
+    }
+
+    private int compareSettlements(int one, int two) {
+        return compareSettlements(this.game, one, two);
     }
 
 

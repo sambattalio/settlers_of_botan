@@ -2,16 +2,24 @@ package bot;
 
 import soc.game.*;
 import soc.robot.*;
-import soc.debug.D;
+import soc.disableDebug.D;
 
+import soc.game.SOCResourceSet;
 import java.util.*;
 
+
+import java.util.Vector;
 import static java.lang.Math.abs;
 
 public class NDHelpers {
-    
+
     static final int MAX_ROAD_DIFF = 3;
     static final int MAX_ARMY_DIFF = 2;
+
+    static final SOCResourceSet ROAD_SET = new SOCResourceSet(1, 0, 0, 0, 1, 0);
+    static final SOCResourceSet DEVEL_SET = new SOCResourceSet(0, 1, 1, 1, 0, 0);
+    private static SOCGame totalProbabilityAtNodeGame;
+    private static HashMap<Integer, Integer> totalProbabilityAtNodeCache;
 
     /* Returns true if input player has longest or is within 3 roads */
     public static boolean isCompetitiveForLongestRoad(SOCGame game, int playerNo) {
@@ -28,7 +36,7 @@ public class NDHelpers {
         SOCPlayer ndBot = game.getPlayer(playerNo);
         return abs(ndBot.getLongestRoadLength() - bestPlayer.getLongestRoadLength()) <= MAX_ROAD_DIFF;
     }
-  
+
     /**
      * Returns if playerNo is deemed competitive for largest army.
      *
@@ -54,7 +62,7 @@ public class NDHelpers {
      * @return true if possible to build a settlement
      */
     public static boolean canBuildSettlement(SOCGame game, int playerNo) {
-         return game.getPlayer(playerNo).getPotentialSettlements().size() != 0;
+        return game.getPlayer(playerNo).getPotentialSettlements().size() != 0;
     }
 
 
@@ -73,7 +81,7 @@ public class NDHelpers {
         return !findPotentialSettlementsFor(game, playerNo, resources).isEmpty();       
     }
 
-     /**
+    /**
      * Returns coords of settlements that will yield the resources in the set
      *
      * TODO maybe ports too?
@@ -85,30 +93,52 @@ public class NDHelpers {
      * @return coords vector 
      */
     public static Vector<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, List<Integer> resources) {
+        if(resources.isEmpty()) {
+            return new Vector<>(game.getPlayer(playerNo).getPotentialSettlements());
+        }
 
-        Vector<Integer> nodes = new Vector<Integer>();
+        Vector<Integer> nodes = new Vector<>();
 
         for (int node : game.getPlayer(playerNo).getPotentialSettlements()) {
 
             Set<Integer> resourceSet = new HashSet<>(resources);
 
             for (int hex : game.getBoard().getAdjacentHexesToNode(node)) {
-               if(resourceSet.contains(game.getBoard().getHexTypeFromCoord(hex))) {
-                   nodes.add(node);
-                   break;
-               }
+                if(resourceSet.contains(game.getBoard().getHexTypeFromCoord(hex))) {
+                    nodes.add(node);
+                    break;
+                }
             }
         }
 
         return nodes;
     }
 
+    /**
+     * Returns resources yielded from a roll @ coord
+     *
+     * @param game
+     * @param coord
+     * @return vect of resource types
+     */
+    public static SOCResourceSet findResourcesFromCoord(SOCGame game, int coord) {
+        SOCResourceSet resources = new SOCResourceSet();
 
-     /**
+        for (int hex : game.getBoard().getAdjacentHexesToNode(coord)) {
+            int type = game.getBoard().getHexTypeFromCoord(hex);
+            if (type < 0 || type > 6) continue;
+            resources.add(1, type);
+        }
+
+        return resources;
+    }
+
+
+    /**
      * Returns *coord* of the best possible settlement for given resources
      *
-     * @param board
-     * @param playerNo
+     * @param game
+     * @param player
      * @param resources
      *
      * @return best settlement
@@ -116,20 +146,17 @@ public class NDHelpers {
      */
     public static SOCPossibleSettlement bestPossibleSettlement(SOCGame game, SOCPlayer player, List<Integer> resources) {
         int playerNo = player.getPlayerNumber();
-    	Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
         
-    	if(possible_nodes.size() <= 0) {
-    		return null;
-    	}
-    	
-        int bestNode = possible_nodes.get(0);
+        Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
 
-        for (int i = 1; i < possible_nodes.size(); i++) {
-            if (NDRobotDM.totalProbabilityAtNode(game, bestNode) > NDRobotDM.totalProbabilityAtNode(game, possible_nodes.get(i))) {
-                bestNode = possible_nodes.get(i);
+        int bestNode = possible_nodes.firstElement();
+
+        for (int node : possible_nodes) {
+            if (totalProbabilityAtNode(game, bestNode) > totalProbabilityAtNode(game, node)) {
+                bestNode = node;
             }
         }
-        
+
         return new SOCPossibleSettlement(player, bestNode, null); //TODO add potential road list
     }
 
@@ -142,9 +169,9 @@ public class NDHelpers {
      * @return Vector of coords
      */
     public static Vector<Integer> findPossibleRoads(SOCGame game, final int edgeCoord) {
-        
-        Vector<Integer> possibleRoads = new Vector<Integer>();
-        
+
+        Vector<Integer> possibleRoads = new Vector<>();
+
         for (int edge : game.getBoard().getAdjacentEdgesToEdge(edgeCoord)) {
             if (canBuildRoadTwo(game, edge, edgeCoord)) {
                 possibleRoads.add(edge);
@@ -181,9 +208,73 @@ public class NDHelpers {
             // search this shizz our
             if (possibleEnd.size() != 0) return new SOCPossibleRoad(player, possibleEnd.get(0), null);
         }
-        
+
         return null;
     }
+
+    /**
+     * Returns road distance from start to end
+     *
+     * @param game
+     * @param player 
+     * @param start coord
+     * @param end coord
+     * @return integer road length
+     */
+    public static int distanceBetweenNodes(SOCGame game, SOCPlayer player, int start, int end) {
+        return BFSToCoord(game, start, end).size();
+    }
+
+
+    public static Vector<Integer> BFSToCoord(SOCGame game, int start, int end) {
+        Queue<Vector<Integer>> queue = new LinkedList<>();
+
+        // push initial coord
+        Vector<Integer> vec = new Vector<>();
+        vec.add(start);
+        queue.add(vec);
+
+        Vector<Integer> bestPath = new Vector<>();
+
+        while (!queue.isEmpty()) {
+            Vector<Integer> current = queue.poll();
+
+            if (current.size() > bestPath.size() && bestPath.size() != 0) continue;
+
+            // Check for possible settlements
+            for (int node : game.getBoard().getAdjacentNodesToEdge(current.lastElement())) {
+                D.ebugPrintln("Considering node " + node + " onto " + current);
+                if (node == end) {
+                    D.ebugPrintln("Can build settlement at " + node);
+
+                    Vector<Integer> next = new Vector<>(current);
+                    // add the settlement to the end of the path leading here
+                    next.add(node);
+                    if (NDRobotDM.comparePaths(game, next, bestPath) > 0) {
+                        bestPath = next;
+                        D.ebugPrintln("Best so far was: " + bestPath.toString());
+                    }
+                }
+            }
+
+            // Check for new roads to build to add to queue
+            for (int edge : game.getBoard().getAdjacentEdgesToEdge(current.lastElement())) {
+                D.ebugPrintln("Adjacent edge to " + current.lastElement() + ": " + edge);
+                boolean isLoop = current.contains(edge);
+                if (NDRobotDM.canBuildRoad(game, edge, current.lastElement()) && !isLoop) {
+                    D.ebugPrintln("Can build road on " + edge);
+                    Vector<Integer> newPath = new Vector<>(current);
+                    newPath.add(edge);
+                    queue.add(newPath);
+                }
+            }
+
+        }
+
+        return bestPath;
+    }
+
+
 
     /**
      * Try to trade for resources
@@ -211,7 +302,7 @@ public class NDHelpers {
      * @return void
      */
     public static void clearPlayersOffer(SOCGame game, int playerNo) {
-       game.getPlayer(playerNo).setCurrentOffer(null);
+        game.getPlayer(playerNo).setCurrentOffer(null);
     }
 
     /**
@@ -223,10 +314,10 @@ public class NDHelpers {
      */
     public static boolean isLongestRoadPossible(SOCGame game, int playerNo) {
         if (!isCompetitiveForLongestRoad(game, playerNo)) return false;
-     
+
         // here we know we are competitive... now lets see if we can reach
         //TODO try to build off getLRPaths()????
-        
+
         return true;
     }
 
@@ -243,8 +334,35 @@ public class NDHelpers {
         Optional<Integer> connectingNode = nodesOnEdgeOne.stream().filter(nodesOnEdgeTwo::contains).findFirst();
 
         if(!connectingNode.isPresent()) return false; // edges do not touch
-        
+
         return true;
     }
 
+    /**
+     * Returns the sum of the probabilities of the tiles surrounding a node
+     * Memoizes since the value will not change
+     *
+     * @param game the game board
+     * @param nodeCoord the node to check
+     * @return the total probability
+     */
+    public static int totalProbabilityAtNode(SOCGame game, final int nodeCoord) {
+        if(totalProbabilityAtNodeGame != game) {
+            totalProbabilityAtNodeCache = new HashMap<>();
+            totalProbabilityAtNodeGame = game;
+        }
+        if(!totalProbabilityAtNodeCache.containsKey(nodeCoord)) {
+            int sum = 0;
+            for (int hexCoord : game.getBoard().getAdjacentHexesToNode(nodeCoord)) {
+                int diceNumber = game.getBoard().getNumberOnHexFromCoord(hexCoord);
+                // skip water
+                if (diceNumber > 12 || diceNumber <= 0) continue;
+                sum += (diceNumber > 7) ? 13 - diceNumber : diceNumber - 1;
+            }
+            soc.debug.D.ebugPrintln("Sum at node " + nodeCoord + " was " + sum);
+
+            totalProbabilityAtNodeCache.put(nodeCoord, sum);
+        }
+        return totalProbabilityAtNodeCache.get(nodeCoord);
+    }
 }

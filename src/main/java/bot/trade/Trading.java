@@ -3,6 +3,7 @@ package bot.trade;
 import soc.game.*;
 import soc.robot.*;
 import java.util.*;
+import java.util.TreeMap;
 
 import soc.debug.D;
 
@@ -22,7 +23,6 @@ public class Trading extends SOCRobotNegotiator {
         
         brain = br;
         game = brain.getGame();
-        brain.setTradeResponseTime(100);
         playerNo = brain.getOurPlayerData().getPlayerNumber();
         player = brain.getOurPlayerData();
 
@@ -33,14 +33,6 @@ public class Trading extends SOCRobotNegotiator {
         resourceArray[4] = SOCResourceConstants.WOOD;
         resourceArray[5] = SOCResourceConstants.UNKNOWN;
     }
-    
-    public static final int IGNORE_OFFER = -1;
-
-    /** Response: Reject an offer. */
-    public static final int REJECT_OFFER = 0;
-
-    /** Response: Accept an offer. */
-    public static final int ACCEPT_OFFER = 1;
 
     private SOCResourceSet getPlayerResources() {
     	return brain.getOurPlayerData().getResources();
@@ -55,18 +47,43 @@ public class Trading extends SOCRobotNegotiator {
     }
     
     private int toArrayIdx(int type) {
+    	
     	switch(type) {
-    	case SOCResourceConstants.CLAY:
-    		return 0;
-    	case SOCResourceConstants.ORE:
-    		return 1;
-    	case SOCResourceConstants.SHEEP:
-    		return 2;
-    	case SOCResourceConstants.WHEAT:
-    		return 3;
-    	case SOCResourceConstants.WOOD:
-    		return 4;
+	    	case SOCResourceConstants.CLAY:
+	    		return 0;
+	    	case SOCResourceConstants.ORE:
+	    		return 1;
+	    	case SOCResourceConstants.SHEEP:
+	    		return 2;
+	    	case SOCResourceConstants.WHEAT:
+	    		return 3;
+	    	case SOCResourceConstants.WOOD:
+	    		return 4;
+	    	case SOCResourceConstants.UNKNOWN:
+	    		return 5;
     	}
+    	
+    	return -1;
+    }
+    
+    private String toStringResources(int type) {
+    	
+    	switch(type) {
+	    	case SOCResourceConstants.CLAY:
+	    		return "Clay";
+	    	case SOCResourceConstants.ORE:
+	    		return "Ore";
+	    	case SOCResourceConstants.SHEEP:
+	    		return "Sheep";
+	    	case SOCResourceConstants.WHEAT:
+	    		return "Wheat";
+	    	case SOCResourceConstants.WOOD:
+	    		return "Wood";
+	    	case SOCResourceConstants.UNKNOWN:
+	    		return "Unknown";
+    	}
+    	
+    	return "";
     }
 
     private SOCResourceSet determineWhatIsNeeded(int type) {
@@ -104,10 +121,11 @@ public class Trading extends SOCRobotNegotiator {
 	    return needed;
     }
 
-    public boolean tradingThinking(int type) {
+    /*public boolean tradingThinking(int type) {
     	D.ebugPrintln("----- Trading Thinking -----");
     	SOCResourceSet needed = determineWhatIsNeeded(type);
     	SOCResourceSet resources = getPlayerResources();
+    	D.ebugPrintln("Resources: " + resources);
     	
     	if(needed.getTotal() > 2) {
     		return false;
@@ -118,125 +136,149 @@ public class Trading extends SOCRobotNegotiator {
         
         // Get Probabilities for Each Hex Type
         
-        int[] freqs = new int[5];
+        int[] freqs = new int[6];
         Arrays.fill(freqs, 0);
         
         Vector<SOCSettlement> settlements = player.getSettlements();
-        Iterator i = settlements.iterator();
-        while (i.hasNext()) {
-        	SOCSettlement s = i.next();
-        	for (int hexCoord : game.getBoard().getAdjacentHexesToNode(s)) {
+        Iterator<SOCSettlement> settlementIdx = settlements.iterator();
+        while (settlementIdx.hasNext()) {
+        	SOCSettlement s = settlementIdx.next();
+        	
+        	for (int hexCoord : game.getBoard().getAdjacentHexesToNode(s.getCoordinates())) {
                 int diceNumber = game.getBoard().getNumberOnHexFromCoord(hexCoord);
                 // skip water
                 if (diceNumber > 12 || diceNumber <= 0) continue;
                 int probability = (diceNumber > 7) ? 13 - diceNumber : diceNumber - 1;
-                freqs[toArrayIdx(getHexTypeFromCoord(s))] += probability;
+                freqs[toArrayIdx(game.getBoard().getHexTypeFromCoord(hexCoord))] += probability;
             }
         }
         
+        D.ebugPrintln("freqs: " + Arrays.toString(freqs));
+        
         // Get Number Of Each Resource That I Currently Have
-        SortedMap<int, int> resourcesSorted = new TreeMap<int, int>(); 
+        Map<Integer, Integer> initialResourceMap = new HashMap<>();
+        LinkedHashMap<Integer, Integer> resourcesSorted = new LinkedHashMap<>();
+        
         for (int r : resourceArray) {
-        	resourcesSorted.put(resources.getAmount(r), r);
+        	initialResourceMap.put(r, resources.getAmount(r));
         }
         
-        Set set = treemap.entrySet(); 
-        Iterator i = set.iterator();
+        initialResourceMap.entrySet()
+        .stream()
+        .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder())) 
+        .forEachOrdered(x -> resourcesSorted.put(x.getKey(), x.getValue()));
         
+        D.ebugPrintln("Resources Sorted: " + resourcesSorted);
+      
         // Figure out what to give
         switch(type) {
         	case SOCPossiblePiece.ROAD:
-        		// Trade sheep, wheat, or ore with high frequency - if don't have with high freq, trade one with most - last case, trade surplus wood or brick
+        		// Trade sheep, wheat, or ore with high freqsuency - if don't have with high freqs, trade one with most - last case, trade surplus wood or CLAY
         		boolean first = true;
         		int firstResource = SOCResourceConstants.UNKNOWN;
         		
-                while (i.hasNext()) { 
-                    Map.Entry me = (Map.Entry)i.next(); 
-                    if (me.getValue() != SOCResourceConstants.WOOD && me.getValue() != SOCResourceConstants.BRICK) {
+        		for(Integer key: resourcesSorted.keySet()) { 
+                    if (key != SOCResourceConstants.WOOD && key != SOCResourceConstants.CLAY && resources.getAmount(key) > 0) {
                     	if (first) {
                     		first = false;
-                    		firstResource = me.getValue();
+                    		firstResource = key;
                     	}
                     	
-                    	if (freq[toArrayIdx(me.getValue())] > 15){ //Not Sure What Value Here
-                        	giveResourceSet.add(1, me.getValue());
+                    	if (freqs[toArrayIdx(key)] > 6 && resources.getAmount(key) > 0){ //Not Sure What key Here
+                    		D.ebugPrintln("Trade " + toStringResources(key) + "Because High Frequency and not wood or brick - for road");
+                        	giveResourceSet.add(1, key);
                         	break;
                         }
                     }
                 }
                 
-                if (giveResourceSet.getTotal() == 0) {
+                if (giveResourceSet.getTotal() == 0 && firstResource != SOCResourceConstants.UNKNOWN) {
                 	giveResourceSet.add(1, firstResource);
+                	D.ebugPrintln("Trade " + toStringResources(firstResource) + " bc most quantity since no high freq resources - for road");
                 }
                 
                 if (giveResourceSet.getTotal() == 0) {
-                	if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.BRICK)) {
+                	if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.CLAY) && resources.getAmount(SOCResourceConstants.WOOD) > 1) {
                 		giveResourceSet.add(1, SOCResourceConstants.WOOD);
-                	} else if (resources.getAmount(SOCResourceConstants.BRICK) > resources.getAmount(SOCResourceConstants.WOOD)) {
-                		giveResourceSet.add(1, SOCResourceConstants.BRICK);
+                		D.ebugPrintln("Trade wood bc surplus - for road");
+                	} else if (resources.getAmount(SOCResourceConstants.CLAY) > resources.getAmount(SOCResourceConstants.WOOD) && resources.getAmount(SOCResourceConstants.CLAY) > 1) {
+                		giveResourceSet.add(1, SOCResourceConstants.CLAY);
+                		D.ebugPrintln("Trade clay bc surplus - for road");
                 	}
                 }
                 
         		break;
         	case SOCPossiblePiece.SETTLEMENT:
-        		// trade ore first but if no ore, trade highest freq surplus of others
-        		int bestFreq = -100;
-        		int bestFreqResource = SOCResourceConstants.UNKNOWN;
+        		// trade ore first but if no ore, trade highest freqs surplus of others
+        		int bestfreqs = -100;
+        		int bestfreqsResource = SOCResourceConstants.UNKNOWN;
         		
         		if(resources.getAmount(SOCResourceConstants.ORE) > 0) {
+        			D.ebugPrintln("Trade ore bc not need - for settlement");
         			giveResourceSet.add(1, SOCResourceConstants.ORE);
         			break;
         		}
         		
-        		while (i.hasNext()) { 
-                    if (resources.getAmount(me.getVale()) > 1 && freq[toArrayIdx(me.getValue())] > bestFreq){
-                    	bestFreq = freq[toArrayIdx(me.getValue())];
-                    	bestFreqResource = me.getValue();
+        		for(Integer key: resourcesSorted.keySet()) { 
+                    if (resources.getAmount(key) > 1 && freqs[toArrayIdx(key)] > bestfreqs){
+                    	bestfreqs = freqs[toArrayIdx(key)];
+                    	bestfreqsResource = key;
                     }
                 } 
         		
-        		giveResourceSet.add(1, bestFreqResource);
+        		D.ebugPrintln("Trade " + toStringResources(bestfreqsResource) + " bc most likely to get again - for settlement");
+        		if(bestfreqsResource != SOCResourceConstants.UNKNOWN) {
+        			giveResourceSet.add(1, bestfreqsResource);
+        		}
         		
         		break;
         	case SOCPossiblePiece.CITY:
         		// skip ore and wheat and get rid of most cards - none of those then get rid of surlpus ore or wheat
-        		while (i.hasNext()) { 
-                    Map.Entry me = (Map.Entry)i.next(); 
-                    if (me.getValue() == SOCResourceConstants.ORE || me.getValue() == SOCResourceConstants.WHEAT) {
+        		for(Integer key: resourcesSorted.keySet()) { 
+                    if (key == SOCResourceConstants.ORE || key == SOCResourceConstants.WHEAT) {
                     	continue;
-                    } else if (freq[toArrayIdx(me.getValue())] > 15){ //Not Sure What Value Here
-                    	giveResourceSet.add(1, me.getValue());
+                    } else if (freqs[toArrayIdx(key)] > 6 && resources.getAmount(key) > 0){ //Not Sure What key Here
+                    	D.ebugPrintln("Trade " + toStringResources(key) + "Because High Frequency and not ore or wheat - for city");
+                    	giveResourceSet.add(1, key);
                     	break;
                     }
                 } 
                 
                 if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.ORE) > 3) {
+                	D.ebugPrintln("Trade surplus ore - for settlement");
             		giveResourceSet.add(1, SOCResourceConstants.ORE);
-            	} else if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.WHEAT) > 2) {
+            	} 
+                
+                if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.WHEAT) > 2) {
             		giveResourceSet.add(1, SOCResourceConstants.WHEAT);
+            		D.ebugPrintln("Trade surplus wheat - for settlement");
             	}
                 
         		break;
         	case SOCPossiblePiece.CARD:
-        		// pick between wood or brick - if neither give surplus sheep, wheat, or ore
-        		if (resources.getAmount(SOCResourceConstants.BRICK) > 0 && freq[toArrayIdx(OCResourceConstants.BRICK)] > freq[toArrayIdx(OCResourceConstants.WOOD)]) {
-        			giveResourceSet.add(1, SOCResourceConstants.BRICK);
+        		// pick between wood or CLAY - if neither give surplus sheep, wheat, or ore
+        		if (resources.getAmount(SOCResourceConstants.CLAY) > 0 && freqs[toArrayIdx(SOCResourceConstants.CLAY)] > freqs[toArrayIdx(SOCResourceConstants.WOOD)]) {
+        			D.ebugPrintln("Trade clay bc better freq than wood and we have it- for card");
+        			giveResourceSet.add(1, SOCResourceConstants.CLAY);
         			break;
-        		} else if (resources.getAmount(SOCResourceConstants.WOOD) > 0 && freq[toArrayIdx(OCResourceConstants.WOOD)] > freq[toArrayIdx(OCResourceConstants.BRICK)]) {
+        		} else if (resources.getAmount(SOCResourceConstants.WOOD) > 0 && freqs[toArrayIdx(SOCResourceConstants.WOOD)] > freqs[toArrayIdx(SOCResourceConstants.CLAY)]) {
+        			D.ebugPrintln("Trade wood bc better freq than clay and we have it- for card");
         			giveResourceSet.add(1, SOCResourceConstants.WOOD);
         			break;
-        		} else if (resources.getAmount(SOCResourceConstants.BRICK) > resources.getAmount(SOCResourceConstants.WOOD)) {
-        			giveResourceSet.add(1, SOCResourceConstants.BRICK);
+        		} else if (resources.getAmount(SOCResourceConstants.CLAY) > resources.getAmount(SOCResourceConstants.WOOD)) {
+        			D.ebugPrintln("Trade clay bc have more of it than wood- for card");
+        			giveResourceSet.add(1, SOCResourceConstants.CLAY);
         			break;
-        		} else if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.BRICK)) {
+        		} else if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.CLAY)) {
+        			D.ebugPrintln("Trade wood bc have more of it than clay- for card");
         			giveResourceSet.add(1, SOCResourceConstants.WOOD);
         			break;
         		}
         		
-        		while (i.hasNext()) {
-        			Map.Entry me = (Map.Entry)i.next();
-        			if (me.getValue() != SOCResourceConstants.WOOD && me.getValue() != SOCResourceConstants.BRICK) {
-        				giveResourceSet.add(1, me.getValue());
+        		for(Integer key: resourcesSorted.keySet()) { 
+        			if (key != SOCResourceConstants.WOOD && key != SOCResourceConstants.CLAY && resources.getAmount(key) > 1) {
+        				D.ebugPrintln("Trade " + toStringResources(key) + " bc most surplus of that- for card");
+        				giveResourceSet.add(1, key);
         				break;
         			}
         		}
@@ -256,7 +298,12 @@ public class Trading extends SOCRobotNegotiator {
    			}
    		}
         
-        makeTradeOffer(giveResourceSet, getResourceSet);
+        D.ebugPrintln("Official giveResourceSet: " + giveResourceSet);
+        D.ebugPrintln("Official getResourceSet: " + getResourceSet);
+        
+        if(giveResourceSet.getTotal() != 0) {
+        	return makeTradeOffer(giveResourceSet, getResourceSet);
+        }
         
         return false;
     }
@@ -295,6 +342,7 @@ public class Trading extends SOCRobotNegotiator {
         if (game.getCurrentPlayerNumber() == playerNo) {
         	
         	SOCTradeOffer offer = new SOCTradeOffer(game.getName(), playerNo, players_to_offer, give, get);
+        	SOCResourceSet resourcesBefore = getPlayerResources();
         	
             // see if we've made this offer before
             
@@ -318,7 +366,19 @@ public class Trading extends SOCRobotNegotiator {
 	        	addToOffersMade(offer);
 	        	brain.setCounter(0);
 	        	game.getPlayer(playerNo).setCurrentOffer(offer);
+	        	brain.setTradeResponseTime(100);
 	        	brain.getClient().offerTrade(game, offer);
+	        	
+	        	while(brain.getWaitingResponse()) {
+	        		D.ebugPrintln("-");
+	        	}
+	        	
+	        	SOCResourceSet resourcesAfter = getPlayerResources();
+	        	
+	        	D.ebugPrintln("Resources Before: " + resourcesBefore);
+	        	D.ebugPrintln("Resources After: " + resourcesAfter);
+	        	
+	        	return true;
         	}
         }
         
@@ -328,6 +388,222 @@ public class Trading extends SOCRobotNegotiator {
     public boolean attemptTradeOffer(int type) {
     	D.ebugPrintln("!!! ----- Trading " + toString(type) + " ----- !!!");
     	return tradingThinking(type);
+    }*/
+    
+    @Override
+    public SOCTradeOffer makeOffer(SOCPossiblePiece targetPiece) {
+    	int type = targetPiece.getType();
+    	D.ebugPrintln("----- Make Offer Thinking -----");
+    	SOCResourceSet needed = determineWhatIsNeeded(type);
+    	SOCResourceSet resources = getPlayerResources();
+    	D.ebugPrintln("Resources: " + resources);
+    	
+    	if(needed.getTotal() > 2) {
+    		return null;
+    	}
+    	
+    	SOCResourceSet getResourceSet = new SOCResourceSet();
+        SOCResourceSet giveResourceSet = new SOCResourceSet();
+        
+        // Get Probabilities for Each Hex Type
+        
+        int[] freqs = new int[6];
+        Arrays.fill(freqs, 0);
+        
+        Vector<SOCSettlement> settlements = player.getSettlements();
+        Iterator<SOCSettlement> settlementIdx = settlements.iterator();
+        while (settlementIdx.hasNext()) {
+        	SOCSettlement s = settlementIdx.next();
+        	
+        	for (int hexCoord : game.getBoard().getAdjacentHexesToNode(s.getCoordinates())) {
+                int diceNumber = game.getBoard().getNumberOnHexFromCoord(hexCoord);
+                // skip water
+                if (diceNumber > 12 || diceNumber <= 0) continue;
+                int probability = (diceNumber > 7) ? 13 - diceNumber : diceNumber - 1;
+                freqs[toArrayIdx(game.getBoard().getHexTypeFromCoord(hexCoord))] += probability;
+            }
+        }
+        
+        D.ebugPrintln("freqs: " + Arrays.toString(freqs));
+        
+        // Get Number Of Each Resource That I Currently Have
+        Map<Integer, Integer> initialResourceMap = new HashMap<>();
+        LinkedHashMap<Integer, Integer> resourcesSorted = new LinkedHashMap<>();
+        
+        for (int r : resourceArray) {
+        	initialResourceMap.put(r, resources.getAmount(r));
+        }
+        
+        initialResourceMap.entrySet()
+        .stream()
+        .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder())) 
+        .forEachOrdered(x -> resourcesSorted.put(x.getKey(), x.getValue()));
+        
+        D.ebugPrintln("Resources Sorted: " + resourcesSorted);
+      
+        // Figure out what to give
+        switch(type) {
+        	case SOCPossiblePiece.ROAD:
+        		// Trade sheep, wheat, or ore with high freqsuency - if don't have with high freqs, trade one with most - last case, trade surplus wood or CLAY
+        		boolean first = true;
+        		int firstResource = SOCResourceConstants.UNKNOWN;
+        		
+        		for(Integer key: resourcesSorted.keySet()) { 
+                    if (key != SOCResourceConstants.WOOD && key != SOCResourceConstants.CLAY && resources.getAmount(key) > 0) {
+                    	if (first) {
+                    		first = false;
+                    		firstResource = key;
+                    	}
+                    	
+                    	if (freqs[toArrayIdx(key)] > 6 && resources.getAmount(key) > 0){ //Not Sure What key Here
+                    		D.ebugPrintln("Trade " + toStringResources(key) + "Because High Frequency and not wood or brick - for road");
+                        	giveResourceSet.add(1, key);
+                        	break;
+                        }
+                    }
+                }
+                
+                if (giveResourceSet.getTotal() == 0 && firstResource != SOCResourceConstants.UNKNOWN) {
+                	giveResourceSet.add(1, firstResource);
+                	D.ebugPrintln("Trade " + toStringResources(firstResource) + " bc most quantity since no high freq resources - for road");
+                }
+                
+                if (giveResourceSet.getTotal() == 0) {
+                	if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.CLAY) && resources.getAmount(SOCResourceConstants.WOOD) > 1) {
+                		giveResourceSet.add(1, SOCResourceConstants.WOOD);
+                		D.ebugPrintln("Trade wood bc surplus - for road");
+                	} else if (resources.getAmount(SOCResourceConstants.CLAY) > resources.getAmount(SOCResourceConstants.WOOD) && resources.getAmount(SOCResourceConstants.CLAY) > 1) {
+                		giveResourceSet.add(1, SOCResourceConstants.CLAY);
+                		D.ebugPrintln("Trade clay bc surplus - for road");
+                	}
+                }
+                
+        		break;
+        	case SOCPossiblePiece.SETTLEMENT:
+        		// trade ore first but if no ore, trade highest freqs surplus of others
+        		int bestfreqs = -100;
+        		int bestfreqsResource = SOCResourceConstants.UNKNOWN;
+        		
+        		if(resources.getAmount(SOCResourceConstants.ORE) > 0) {
+        			D.ebugPrintln("Trade ore bc not need - for settlement");
+        			giveResourceSet.add(1, SOCResourceConstants.ORE);
+        			break;
+        		}
+        		
+        		for(Integer key: resourcesSorted.keySet()) { 
+                    if (resources.getAmount(key) > 1 && freqs[toArrayIdx(key)] > bestfreqs){
+                    	bestfreqs = freqs[toArrayIdx(key)];
+                    	bestfreqsResource = key;
+                    }
+                } 
+        		
+        		D.ebugPrintln("Trade " + toStringResources(bestfreqsResource) + " bc most likely to get again - for settlement");
+        		if(bestfreqsResource != SOCResourceConstants.UNKNOWN) {
+        			giveResourceSet.add(1, bestfreqsResource);
+        		}
+        		
+        		break;
+        	case SOCPossiblePiece.CITY:
+        		// skip ore and wheat and get rid of most cards - none of those then get rid of surlpus ore or wheat
+        		for(Integer key: resourcesSorted.keySet()) { 
+                    if (key == SOCResourceConstants.ORE || key == SOCResourceConstants.WHEAT) {
+                    	continue;
+                    } else if (freqs[toArrayIdx(key)] > 6 && resources.getAmount(key) > 0){ //Not Sure What key Here
+                    	D.ebugPrintln("Trade " + toStringResources(key) + "Because High Frequency and not ore or wheat - for city");
+                    	giveResourceSet.add(1, key);
+                    	break;
+                    }
+                } 
+                
+                if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.ORE) > 3) {
+                	D.ebugPrintln("Trade surplus ore - for settlement");
+            		giveResourceSet.add(1, SOCResourceConstants.ORE);
+            	} 
+                
+                if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.WHEAT) > 2) {
+            		giveResourceSet.add(1, SOCResourceConstants.WHEAT);
+            		D.ebugPrintln("Trade surplus wheat - for settlement");
+            	}
+                
+        		break;
+        	case SOCPossiblePiece.CARD:
+        		// pick between wood or CLAY - if neither give surplus sheep, wheat, or ore
+        		if (resources.getAmount(SOCResourceConstants.CLAY) > 0 && freqs[toArrayIdx(SOCResourceConstants.CLAY)] > freqs[toArrayIdx(SOCResourceConstants.WOOD)]) {
+        			D.ebugPrintln("Trade clay bc better freq than wood and we have it- for card");
+        			giveResourceSet.add(1, SOCResourceConstants.CLAY);
+        			break;
+        		} else if (resources.getAmount(SOCResourceConstants.WOOD) > 0 && freqs[toArrayIdx(SOCResourceConstants.WOOD)] > freqs[toArrayIdx(SOCResourceConstants.CLAY)]) {
+        			D.ebugPrintln("Trade wood bc better freq than clay and we have it- for card");
+        			giveResourceSet.add(1, SOCResourceConstants.WOOD);
+        			break;
+        		} else if (resources.getAmount(SOCResourceConstants.CLAY) > resources.getAmount(SOCResourceConstants.WOOD)) {
+        			D.ebugPrintln("Trade clay bc have more of it than wood- for card");
+        			giveResourceSet.add(1, SOCResourceConstants.CLAY);
+        			break;
+        		} else if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.CLAY)) {
+        			D.ebugPrintln("Trade wood bc have more of it than clay- for card");
+        			giveResourceSet.add(1, SOCResourceConstants.WOOD);
+        			break;
+        		}
+        		
+        		for(Integer key: resourcesSorted.keySet()) { 
+        			if (key != SOCResourceConstants.WOOD && key != SOCResourceConstants.CLAY && resources.getAmount(key) > 1) {
+        				D.ebugPrintln("Trade " + toStringResources(key) + " bc most surplus of that- for card");
+        				giveResourceSet.add(1, key);
+        				break;
+        			}
+        		}
+        		
+        		break;
+        }
+        
+        if(giveResourceSet.getTotal() == 0) {
+        	checkPortsAndFours();
+        }
+        
+    	//Figure Out What To Get 
+        for (int r : resourceArray) {
+    		if(needed.getAmount(r) > 0) {
+   				getResourceSet.add(1, r);
+   				break;
+   			}
+   		}
+        
+        D.ebugPrintln("Official giveResourceSet: " + giveResourceSet);
+        D.ebugPrintln("Official getResourceSet: " + getResourceSet);
+        
+        boolean[] players_to_offer = new boolean[game.maxPlayers];
+        Arrays.fill(players_to_offer, true);
+        players_to_offer[playerNo] = false; // don't offer self
+        
+        for(SOCPlayer p : game.getPlayers()) {
+        	if (p.getPublicVP() > player.getTotalVP()) {
+        		players_to_offer[p.getPlayerNumber()] = false;
+        	}
+        }
+        
+        if(giveResourceSet.getTotal() != 0 && getResourceSet.getTotal() != 0) {
+        	SOCTradeOffer offer = new SOCTradeOffer(game.getName(), playerNo, players_to_offer, giveResourceSet, getResourceSet);
+        	
+        	boolean match = false;
+            Iterator<SOCTradeOffer> offersMadeIter = offersMade.iterator();
+
+            while ((offersMadeIter.hasNext() && !match))
+            {
+                SOCTradeOffer pastOffer = offersMadeIter.next();
+
+                if ((pastOffer != null) && (pastOffer.getGiveSet().equals(giveResourceSet)) && (pastOffer.getGetSet().equals(getResourceSet)))
+                {
+                    match = true;
+                }
+            }
+            if(!match) {
+            	addToOffersMade(offer);
+            	return offer;
+            }
+        }
+        
+        return null;
     }
     
     

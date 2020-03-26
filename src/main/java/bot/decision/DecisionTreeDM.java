@@ -37,7 +37,7 @@ public class DecisionTreeDM extends SOCRobotDM {
         }
     }
     
-    public SOCRobotBrain getBrain() {
+    public NDRobotBrain getBrain() {
     	return brain;
     }
     

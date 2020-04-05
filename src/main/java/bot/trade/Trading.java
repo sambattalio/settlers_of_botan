@@ -16,7 +16,8 @@ public class Trading extends SOCRobotNegotiator {
     private SOCGame game;
     private int playerNo; 
     private SOCPlayer player;
-    
+
+    public static boolean shouldFour = false;    
 
     public Trading(NDRobotBrain br) {
         super(br);
@@ -397,6 +398,8 @@ public class Trading extends SOCRobotNegotiator {
     	SOCResourceSet needed = determineWhatIsNeeded(type);
     	SOCResourceSet resources = getPlayerResources();
     	D.ebugPrintln("Resources: " + resources);
+	brain.setTradeResponseTime(1000);
+	brain.setWaitingResponse(true);
     	
     	if(needed.getTotal() > 2) {
     		return null;
@@ -441,6 +444,7 @@ public class Trading extends SOCRobotNegotiator {
         
         D.ebugPrintln("Resources Sorted: " + resourcesSorted);
       
+	if(!shouldFour) {
         // Figure out what to give
         switch(type) {
         	case SOCPossiblePiece.ROAD:
@@ -555,7 +559,7 @@ public class Trading extends SOCRobotNegotiator {
         		}
         		
         		break;
-        }
+        }}
         
     	//Figure Out What To Get 
         for (int r : resourceArray) {
@@ -577,7 +581,8 @@ public class Trading extends SOCRobotNegotiator {
         		players_to_offer[p.getPlayerNumber()] = false;
         	}
         }
-        
+
+	D.ebugPrintln("Shouldfour: " + shouldFour);        
         if(giveResourceSet.getTotal() != 0 && getResourceSet.getTotal() != 0) {
         	SOCTradeOffer offer = new SOCTradeOffer(game.getName(), playerNo, players_to_offer, giveResourceSet, getResourceSet);
         	
@@ -587,6 +592,7 @@ public class Trading extends SOCRobotNegotiator {
             while ((offersMadeIter.hasNext() && !match))
             {
                 SOCTradeOffer pastOffer = offersMadeIter.next();
+		D.ebugPrintln("Past Offer: " + pastOffer);
 
                 if ((pastOffer != null) && (pastOffer.getGiveSet().equals(giveResourceSet)) && (pastOffer.getGetSet().equals(getResourceSet)))
                 {
@@ -597,10 +603,12 @@ public class Trading extends SOCRobotNegotiator {
             	addToOffersMade(offer);
             	return offer;
             }
-        } else if (resources.getTotal() > 5) {
-	    // Try four for one
+	    D.ebugPrintln("Claim Match");
+        } else if (shouldFour && resources.getTotal() > 5) {
+	    
+	    D.ebugPrintln("Attempt Four");
 	    for (int r : resourceArray) {
-		if(resources.getAmount(r) > 4){
+		if(resources.getAmount(r) > 3){
 		   switch(type) {
 		        case SOCPossiblePiece.ROAD:
 			    if( r == SOCResourceConstants.WOOD && resources.getAmount(r) - 5 >= 0){
@@ -662,13 +670,16 @@ public class Trading extends SOCRobotNegotiator {
 			players_to_offer[p.getPlayerNumber()] = false;
 		    }
 		    
-                    return new SOCTradeOffer(game.getName(), ourPlayerNumber, players_to_offer, giveResourceSet, getResourceSet);
+                    //return new SOCTradeOffer(game.getName(), ourPlayerNumber, players_to_offer, giveResourceSet, getResourceSet);
+
+		    brain.getClient().bankTrade(game, giveResourceSet, getResourceSet);
+		    return null;
 		}
 	    }
 	}
-        
+	
+	 D.ebugPrintln("Trading returned null");        
         return null;
     }
-    
     
 }

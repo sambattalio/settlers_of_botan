@@ -30,6 +30,7 @@ public class DefaultStrategy {
 
 	if (decisionTreeDM.getHelpers().canBuildSettlement()) {
         	D.ebugPrintln("Maybe Settlement");
+		possibleSettlement = decisionTreeDM.getHelpers().findQualitySettlement();
         	if(decisionTreeDM.getHelpers().haveResourcesFor(SETTLEMENT)) {
         		D.ebugPrintln("----- Settlement -----");
 		    return possibleSettlement.get();
@@ -64,21 +65,23 @@ public class DefaultStrategy {
         	}
         }
 	
-        if(decisionTreeDM.getHelpers().haveResourcesFor(CITY)) {
-    	    D.ebugPrintln("----- City -----");
-	    return possibleCity.get();
-	} else if (decisionTreeDM.getHelpers().getPlayerResources().getTotal() > 5) {
-	    while(decisionTreeDM.getBrain().trade(new SOCPossibleCity(null, -1))) {
-		continue;
-	    }
-		    
-	    D.ebugPrintln("done trading");
-		    
+	if((possibleCity = decisionTreeDM.getHelpers().findQualityCity()).isPresent()){
 	    if(decisionTreeDM.getHelpers().haveResourcesFor(CITY)) {
 		D.ebugPrintln("----- City -----");
 		return possibleCity.get();
-	    }
-	  }
+	    } else if (decisionTreeDM.getHelpers().getPlayerResources().getTotal() > 5) {
+		while(decisionTreeDM.getBrain().trade(new SOCPossibleCity(null, -1))) {
+		    continue;
+		}
+			
+		D.ebugPrintln("done trading");
+			
+		if(decisionTreeDM.getHelpers().haveResourcesFor(CITY)) {
+		    D.ebugPrintln("----- City -----");
+		    return possibleCity.get();
+		}
+	      }
+	}
         		
         if (decisionTreeDM.getHelpers().haveResourcesFor(CARD)) {
         	D.ebugPrintln("----- Card -----");

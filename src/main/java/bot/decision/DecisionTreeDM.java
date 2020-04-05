@@ -103,7 +103,7 @@ public class DecisionTreeDM extends SOCRobotDM {
         }
 
         public Optional<SOCPossibleSettlement> findQualitySettlementFor(List<Integer> resources) {
-            return Optional.of(NDHelpers.bestPossibleSettlement(brain.getGame(), brain.getOurPlayerData(), resources));
+            return Optional.ofNullable(NDHelpers.bestPossibleSettlement(brain.getGame(), brain.getOurPlayerData(), resources));
         }
 
         public Optional<SOCPossibleCity> findQualityCityFor(List<Integer> resources) {

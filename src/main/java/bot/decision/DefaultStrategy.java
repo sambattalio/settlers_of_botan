@@ -4,6 +4,7 @@ import soc.robot.SOCPossibleCard;
 import soc.robot.SOCPossibleCity;
 import soc.robot.SOCPossiblePiece;
 import soc.robot.SOCPossibleSettlement;
+import soc.robot.SOCPossibleRoad;
 
 import java.util.Optional;
 
@@ -22,41 +23,78 @@ public class DefaultStrategy {
         Optional<SOCPossibleSettlement> possibleSettlement;
         Optional<SOCPossibleCity> possibleCity;
         
-        Trading trades = decisionTreeDM.getTrades();
-        
         if (decisionTreeDM.getHelpers().haveResourcesForRoadAndSettlement()) {
         	D.ebugPrintln("----- Settlement & Road -----");
             return decisionTreeDM.getHelpers().findQualityRoad(false).orElse(null);
-        } else if (decisionTreeDM.getHelpers().haveResourcesFor(SETTLEMENT)) {
-            if (decisionTreeDM.getHelpers().canBuildSettlement()) {
-                possibleSettlement = decisionTreeDM.getHelpers().findQualitySettlement();
-                if (possibleSettlement.isPresent()) {
-                	D.ebugPrintln("----- Settlement 1 -----");
-                    return possibleSettlement.get();
-                }
-            } else {
-                return decisionTreeDM.getHelpers().findQualityRoad(false).orElse(null);
-            }
-        } else if ((possibleSettlement = decisionTreeDM.getHelpers().findQualitySettlement()).isPresent() && trades.attemptTradeOffer(SETTLEMENT)) {
-        	D.ebugPrintln("----- Settlement 2 -----");
-        	return possibleSettlement.get();
-        } else if (decisionTreeDM.getHelpers().haveResourcesFor(ROAD) || trades.attemptTradeOffer(ROAD)) {
-        	D.ebugPrintln("----- Road -----");
-            return decisionTreeDM.getHelpers().findQualityRoad(false).orElse(null);
-        } else if (decisionTreeDM.getHelpers().haveResourcesFor(CITY)) {
-            possibleCity = decisionTreeDM.getHelpers().findQualityCity();
-            if (possibleCity.isPresent()) {
-            	D.ebugPrintln("----- City -----");
-                return possibleCity.get();
-            }
-        } else if ((possibleCity = decisionTreeDM.getHelpers().findQualityCity()).isPresent() && trades.getNumberOfResources() > 5 && trades.attemptTradeOffer(SETTLEMENT)) {
-        	D.ebugPrintln("----- Settlement 2 -----");
-        	return possibleCity.get();
-        } else if (decisionTreeDM.getHelpers().haveResourcesFor(CARD) || (trades.getNumberOfResources() > 5 && trades.attemptTradeOffer(CARD))) {
-        	D.ebugPrintln("----- Card -----");
-            return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0); // try to get road cards
-        }
+        } 
 
+	if (decisionTreeDM.getHelpers().canBuildSettlement()) {
+        	D.ebugPrintln("Maybe Settlement");
+        	if(decisionTreeDM.getHelpers().haveResourcesFor(SETTLEMENT)) {
+        		D.ebugPrintln("----- Settlement -----");
+		    return possibleSettlement.get();
+        	} else {
+        		
+	        	while(decisionTreeDM.getBrain().trade(new SOCPossibleSettlement(null, -1, null))){
+	        		continue;
+	        	}
+	        	
+	        	D.ebugPrintln("done trading");
+	        	
+	        	if(decisionTreeDM.getHelpers().haveResourcesFor(SETTLEMENT)) {
+	        		D.ebugPrintln("----- Settlement -----");
+	            	return possibleSettlement.get();
+	        	}
+        	}
+        } 
+        
+        if (decisionTreeDM.getHelpers().haveResourcesFor(ROAD)) {
+            D.ebugPrintln("----- Road -----");
+            return decisionTreeDM.getHelpers().findQualityRoad(true).orElse(null);
+        } else {
+        	while(decisionTreeDM.getBrain().trade(new SOCPossibleRoad(null, -1, null))) {
+        		continue;
+        	}
+        	
+        	D.ebugPrintln("done trading");
+        	
+        	if(decisionTreeDM.getHelpers().haveResourcesFor(ROAD)) {
+        		D.ebugPrintln("----- Road -----");
+                return decisionTreeDM.getHelpers().findQualityRoad(true).orElse(null);
+        	}
+        }
+	
+        if(decisionTreeDM.getHelpers().haveResourcesFor(CITY)) {
+    	    D.ebugPrintln("----- City -----");
+	    return possibleCity.get();
+	} else if (decisionTreeDM.getHelpers().getPlayerResources().getTotal() > 5) {
+	    while(decisionTreeDM.getBrain().trade(new SOCPossibleCity(null, -1))) {
+		continue;
+	    }
+		    
+	    D.ebugPrintln("done trading");
+		    
+	    if(decisionTreeDM.getHelpers().haveResourcesFor(CITY)) {
+		D.ebugPrintln("----- City -----");
+		return possibleCity.get();
+	    }
+	  }
+        		
+        if (decisionTreeDM.getHelpers().haveResourcesFor(CARD)) {
+        	D.ebugPrintln("----- Card -----");
+            return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
+        } else if (decisionTreeDM.getHelpers().getPlayerResources().getTotal() > 5) {
+        	while(decisionTreeDM.getBrain().trade(new SOCPossibleCard(null, -1))) {
+    			continue;
+    		}
+        	
+        	D.ebugPrintln("done trading");
+        	
+        	if(decisionTreeDM.getHelpers().haveResourcesFor(CARD)) {
+        	    D.ebugPrintln("----- Card -----");
+		    return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
+    		}
+        }
         return null;
     }
 }

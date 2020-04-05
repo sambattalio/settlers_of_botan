@@ -478,7 +478,7 @@ public class Trading extends SOCRobotNegotiator {
                 	}
                 }
                 
-        		break;
+        	break;
         	case SOCPossiblePiece.SETTLEMENT:
         		// trade ore first but if no ore, trade highest freqs surplus of others
         		int bestfreqs = -100;
@@ -557,17 +557,13 @@ public class Trading extends SOCRobotNegotiator {
         		break;
         }
         
-        if(giveResourceSet.getTotal() == 0) {
-        	checkPortsAndFours();
-        }
-        
     	//Figure Out What To Get 
         for (int r : resourceArray) {
     		if(needed.getAmount(r) > 0) {
-   				getResourceSet.add(1, r);
-   				break;
-   			}
+   		    getResourceSet.add(1, r);
+   		    break;
    		}
+   	}
         
         D.ebugPrintln("Official giveResourceSet: " + giveResourceSet);
         D.ebugPrintln("Official getResourceSet: " + getResourceSet);
@@ -601,7 +597,75 @@ public class Trading extends SOCRobotNegotiator {
             	addToOffersMade(offer);
             	return offer;
             }
-        }
+        } else if (resources.getTotal() > 5) {
+	    // Try four for one
+	    for (int r : resourceArray) {
+		if(resources.getAmount(r) > 4){
+		   switch(type) {
+		        case SOCPossiblePiece.ROAD:
+			    if( r == SOCResourceConstants.WOOD && resources.getAmount(r) - 5 >= 0){
+				giveResourceSet.add(4, r);
+			    }
+			    else if (r == SOCResourceConstants.CLAY && resources.getAmount(r) - 5 >= 0) {
+				giveResourceSet.add(4, r);
+                            }
+			    else if (r != SOCResourceConstants.WOOD && r != SOCResourceConstants.CLAY){
+				giveResourceSet.add(4, r);
+			    }
+			break;
+			case SOCPossiblePiece.SETTLEMENT:
+			    if( r == SOCResourceConstants.WOOD && resources.getAmount(r) - 5 >= 0){
+                                giveResourceSet.add(4, r);
+                            }
+                            else if (r == SOCResourceConstants.CLAY && resources.getAmount(r) - 5 >= 0) {
+                                giveResourceSet.add(4, r);
+                            }
+			    else if (r == SOCResourceConstants.WHEAT && resources.getAmount(r) - 5 >= 0) {
+                                giveResourceSet.add(4, r);
+                            }
+			    else if (r == SOCResourceConstants.SHEEP && resources.getAmount(r) - 5 >= 0) {
+                                giveResourceSet.add(4, r);
+                            }
+                            else if (r != SOCResourceConstants.ORE){
+                                giveResourceSet.add(4, r);
+                            }
+                        break;
+			case SOCPossiblePiece.CITY:
+			    if( r == SOCResourceConstants.ORE && resources.getAmount(r) - 7 >= 0){
+                                giveResourceSet.add(4, r);
+                            }
+                            else if (r == SOCResourceConstants.WHEAT && resources.getAmount(r) - 6 >= 0) {
+                                giveResourceSet.add(4, r);
+                            }
+                            else if (r != SOCResourceConstants.ORE && r != SOCResourceConstants.WHEAT){
+                                giveResourceSet.add(4, r);
+                            }
+                        break;
+			case SOCPossiblePiece.CARD:
+			    if( r == SOCResourceConstants.ORE && resources.getAmount(r) - 5 >= 0){
+                                giveResourceSet.add(4, r);
+                            }
+                            else if (r == SOCResourceConstants.SHEEP && resources.getAmount(r) - 5 >= 0) {
+                                giveResourceSet.add(4, r);
+                            }
+                            else if (r == SOCResourceConstants.WHEAT && resources.getAmount(r) - 5 >= 0) {
+                                giveResourceSet.add(4, r);
+                            }
+                            else if (r == SOCResourceConstants.WOOD || r == SOCResourceConstants.CLAY){
+                                giveResourceSet.add(4, r);
+                            }
+                        break;
+		 
+		    }
+
+		    for(SOCPlayer p : game.getPlayers()) {
+			players_to_offer[p.getPlayerNumber()] = false;
+		    }
+		    
+                    return new SOCTradeOffer(game.getName(), ourPlayerNumber, players_to_offer, giveResourceSet, getResourceSet);
+		}
+	    }
+	}
         
         return null;
     }

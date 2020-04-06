@@ -390,7 +390,84 @@ public class Trading extends SOCRobotNegotiator {
     	D.ebugPrintln("!!! ----- Trading " + toString(type) + " ----- !!!");
     	return tradingThinking(type);
     }*/
-    
+
+    public int getFirstResourceNeeded(SOCResourceSet resources) {
+        for (int resource = SOCResourceConstants.CLAY; resource <= SOCResourceConstants.WOOD; resource++) {
+            if (resources.contains(resource)) return resource;
+        }
+        return -1;
+    }
+
+    public boolean attemptPortTrade(SOCResourceSet whatIsNeeded, SOCPossiblePiece targetPiece) {
+        SOCResourceSet resourcesToBuild = whatIsNeeded;
+        SOCResourceSet actualToBuild = targetPiece.getResourcesToBuild();
+        SOCResourceSet playerResources  = this.player.getResources();
+
+        boolean[] portFlags = this.player.getPortFlags(); 
+        // port type == resource type
+        for (int portType = SOCBoard.CLAY_PORT; portType <= SOCBoard.WOOD_PORT; portType++) {
+            // skip "no ports"
+            if (!portFlags[portType]) continue;
+
+            // break if hit all resources to build
+            if (resourcesToBuild.getTotal() == 0) break;
+            
+            // get count of current resource in player's hand
+            int count = playerResources.getAmount(portType);
+
+            // subtract amount to make current target
+            // eg. we don't want to trade away wood if we need wood to build
+            count -= actualToBuild.getAmount(portType);
+           
+            // make 2:1 trades until no more to trade
+            while (count >= 2) {
+                count -= 2;
+                SOCResourceSet giveResourceSet = new SOCResourceSet();
+                giveResourceSet.add(2, portType);
+                SOCResourceSet getResourceSet = new SOCResourceSet();
+                int needed = this.getFirstResourceNeeded(resourcesToBuild);
+                getResourceSet.add(1, needed);
+                // remove from needed
+                resourcesToBuild.subtract(1, needed);
+                // make trade
+                brain.getClient().bankTrade(game, giveResourceSet, getResourceSet);
+            } 
+        }
+
+        // misc type is special case... any 3-1
+        // do it AFTER doing 2:1 trades
+        if (portFlags[SOCBoard.MISC_PORT]) {
+            // handle later
+            for (int resource = SOCResourceConstants.CLAY; resource <= SOCResourceConstants.WOOD; resource++) {
+                // break if hit all resources to build
+                if (resourcesToBuild.getTotal() == 0) break;
+                
+                // get count of current resource in player's hand
+                int count = playerResources.getAmount(resource);
+
+                // subtract amount to make current target
+                count -= actualToBuild.getAmount(resource);
+               
+                // make 3:1 trades until no more to trade
+                while (count >= 3) {
+                    count -= 3;
+                    SOCResourceSet giveResourceSet = new SOCResourceSet();
+                    giveResourceSet.add(3, resource);
+                    SOCResourceSet getResourceSet = new SOCResourceSet();
+                    int needed = this.getFirstResourceNeeded(resourcesToBuild);
+                    getResourceSet.add(1, needed);
+                    // remove from needed
+                    resourcesToBuild.subtract(1, needed);
+                    // make trade
+                    brain.getClient().bankTrade(game, giveResourceSet, getResourceSet);
+                } 
+            }
+        }
+
+        // return if port trading successfully fuffilled needed pieces
+        return resourcesToBuild.getTotal() == 0;        
+    }
+
     @Override
     public SOCTradeOffer makeOffer(SOCPossiblePiece targetPiece) {
     	int type = targetPiece.getType();
@@ -584,9 +661,9 @@ public class Trading extends SOCRobotNegotiator {
 
 	D.ebugPrintln("Shouldfour: " + shouldFour);        
         if(giveResourceSet.getTotal() != 0 && getResourceSet.getTotal() != 0) {
-        	SOCTradeOffer offer = new SOCTradeOffer(game.getName(), playerNo, players_to_offer, giveResourceSet, getResourceSet);
+            SOCTradeOffer offer = new SOCTradeOffer(game.getName(), playerNo, players_to_offer, giveResourceSet, getResourceSet);
         	
-        	boolean match = false;
+            boolean match = false;
             Iterator<SOCTradeOffer> offersMadeIter = offersMade.iterator();
 
             while ((offersMadeIter.hasNext() && !match))
@@ -605,7 +682,6 @@ public class Trading extends SOCRobotNegotiator {
             }
 	    D.ebugPrintln("Claim Match");
         } else if (shouldFour && resources.getTotal() > 5) {
-	    
 	    D.ebugPrintln("Attempt Four");
 	    for (int r : resourceArray) {
 		if(resources.getAmount(r) > 3){

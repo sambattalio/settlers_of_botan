@@ -15,8 +15,7 @@ import soc.game.SOCResourceSet;
 
 import soc.debug.D;
 
-public class NDRobotBrain extends SOCRobotBrain {
-    
+public class NDRobotBrain extends SOCRobotBrain { 
 
     public NDRobotBrain(SOCRobotClient rc, SOCRobotParameters params, SOCGame ga, CappedQueue<SOCMessage> mq) {
         super(rc, params, ga, mq);
@@ -49,41 +48,23 @@ public class NDRobotBrain extends SOCRobotBrain {
     public void setCounter(int i) {
     	counter = i;
     }
-    
-    public boolean trade(SOCPossiblePiece p) {
-    	SOCResourceSet resourcesBefore = ourPlayerData.getResources();
-    	
-    	boolean result = makeOffer(p);
-    	
-    	SOCResourceSet resourcesAfter = ourPlayerData.getResources();
-    	
-    	D.ebugPrintln("Before: " + resourcesBefore);
-    	D.ebugPrintln("After: " + resourcesAfter);
-    	
-    	if(!result) {
-    		D.ebugPrintln("No offer made");
-    	}
-    	
-    	return result && !resourcesBefore.equals(resourcesAfter);
+
+    public void setFour(boolean should){
+	Trading.shouldFour = should;
     }
     
-    /*public void check() {
-    	final SOCMessage mes = gameEventQ.get();  // Sleeps until message received
-    	final int mesType;
+    public boolean trade(SOCPossiblePiece p) {
     	
-    	if(mes != null) {
-    		 mesType = mes.getType();
-             if (mesType != SOCMessage.TIMINGPING)
-                 turnEventsCurrent.addElement(mes);
-             if (D.ebugOn)
-                 D.ebugPrintln("mes - " + mes);
-    	} else {
-            mesType = -1;
-        }
+    	boolean result = makeOffer(p);
+
+    	if(!result) {
+    	    D.ebugPrintln("No offer made");
+    	}
+
+	pause(5000);
+	D.ebugPrintln("Done Pause");
     	
-    	if (waitingForTradeResponse && (counter > tradeResponseTimeoutSec))
-        {
-            tradeStopWaitingClearOffer();
-        }
-    }*/
+    	return result;
+    }
+
 }

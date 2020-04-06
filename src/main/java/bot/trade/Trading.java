@@ -408,6 +408,7 @@ public class Trading extends SOCRobotNegotiator {
 
         public boolean portWorthIt(SOCPossiblePiece targetPiece) {
 	    SOCResourceSet actualToBuild = targetPiece.getResourcesToBuild();
+	    D.ebugPrintln("Target resources in ports: " + actualToBuild);
             SOCResourceSet playerResources  = this.player.getResources();
             boolean portFlags[] = this.player.getPortFlags();
             
@@ -416,11 +417,13 @@ public class Trading extends SOCRobotNegotiator {
 
                 int threshold = (portType == SOCBoard.MISC_PORT) ? 3 : 2;
 
-                if (playerResources.getAmount(portType) - actualToBuild.getAmount(portType) > threshold) {
+                if (playerResources.getAmount(portType) - actualToBuild.getAmount(portType) >= threshold) {
+		    D.ebugPrintln("Port worth is true");
                     return true;
                 }
             }
 
+	    D.ebugPrintln("Port worth is false");
             return false;
         }
 
@@ -446,7 +449,7 @@ public class Trading extends SOCRobotNegotiator {
 			count -= actualToBuild.getAmount(portType);
 
 			// make 2:1 trades until no more to trade
-			while (count >= 2) {
+			while (count >= 2 && resourcesToBuild.getTotal() > 0) {
 				count -= 2;
 				SOCResourceSet giveResourceSet = new SOCResourceSet();
 				giveResourceSet.add(2, portType);
@@ -456,7 +459,12 @@ public class Trading extends SOCRobotNegotiator {
 				// remove from needed
 				resourcesToBuild.subtract(1, needed);
 				// make trade
+				D.ebugPrintln("Port Give: " + giveResourceSet);
+				D.ebugPrintln("Port Get: " + getResourceSet);
+				D.ebugPrintln("Still needed: " + resourcesToBuild);
+				D.ebugPrintln(" Make 2:1 Port Trade with " + portType);
 				brain.getClient().bankTrade(game, giveResourceSet, getResourceSet);
+				brain.pause(2000);
 			}
 		}
 
@@ -485,22 +493,35 @@ public class Trading extends SOCRobotNegotiator {
 					// remove from needed
 					resourcesToBuild.subtract(1, needed);
 					// make trade
+					D.ebugPrintln("Port Give: " + giveResourceSet);
+					D.ebugPrintln("Port Get: " + getResourceSet);
+					D.ebugPrintln("Still needed: " + resourcesToBuild);
+					D.ebugPrintln(" Make 3:1 Port Trade");
 					brain.getClient().bankTrade(game, giveResourceSet, getResourceSet);
+					brain.pause(2000);
 				}
 			}
 		}
 
 		// return leftover resources needed
+		D.ebugPrintln("What's still needed after port trading: " + resourcesToBuild);
                 return resourcesToBuild;
 	}
 
 	@Override
 	public SOCTradeOffer makeOffer(SOCPossiblePiece targetPiece) {
-		int type = targetPiece.getType();
 		D.ebugPrintln("----- Make Offer Thinking -----");
-		SOCResourceSet needed = determineWhatIsNeeded(type);
+		int type = targetPiece.getType();
+		SOCResourceSet needed;
+		if(!shouldFour && portWorthIt(targetPiece)) {
+		    D.ebugPrintln("----- He be looking at ports -----");
+		    needed = attemptPortTrade(determineWhatIsNeeded(type), targetPiece);
+		} else {
+		    needed = determineWhatIsNeeded(type);
+		}
+		
 		SOCResourceSet resources = getPlayerResources();
-		D.ebugPrintln("Resources: " + resources);
+		D.ebugPrintln("Resources after ports: " + resources);
 		brain.setTradeResponseTime(1000);
 		brain.setWaitingResponse(true);
 
@@ -707,7 +728,8 @@ public class Trading extends SOCRobotNegotiator {
 				return offer;
 			}
 			D.ebugPrintln("Claim Match");
-		} else if (shouldFour && resources.getTotal() > 5) {
+		}
+		else if (shouldFour && resources.getTotal() > 5) {
 			D.ebugPrintln("Attempt Four");
 			for (int r : resourceArray) {
 				if(resources.getAmount(r) > 3){

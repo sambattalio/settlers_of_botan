@@ -80,6 +80,7 @@ public class DecisionTreeDM extends SOCRobotDM {
 
         public boolean haveResourcesFor(int type) {
             ResourceSet set = brain.getOurPlayerData().getResources();
+	    D.ebugPrintln("Brain thinks bot has: " + set);
             switch (type) {
                 case SOCPossiblePiece.ROAD:
                     return set.getAmount(SOCResourceConstants.CLAY) >= 1 &&

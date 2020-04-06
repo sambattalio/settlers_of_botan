@@ -15,7 +15,7 @@ import soc.game.SOCResourceSet;
 
 import soc.debug.D;
 
-public class NDRobotBrain extends SOCRobotBrain { 
+public class NDRobotBrain extends SOCRobotBrain {
 
     public NDRobotBrain(SOCRobotClient rc, SOCRobotParameters params, SOCGame ga, CappedQueue<SOCMessage> mq) {
         super(rc, params, ga, mq);

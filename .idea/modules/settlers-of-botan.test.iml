@@ -7,6 +7,15 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="settlers-of-botan.main" />
+    <orderEntry type="module-library" scope="RUNTIME">
+      <library name="Gradle: com.google.code.gson:gson:2.8.6">
+        <CLASSES>
+          <root url="file://$APPLICATION_HOME_DIR$/jbr/bin/Cannot resolve external dependency com.google.code.gson:gson:2.8.6 because no repositories are defined." />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
     <orderEntry type="module" module-name="settlers-of-botan.lib.jsettlers2.main" />
   </component>
   <component name="TestModuleProperties" production-module="settlers-of-botan.main" />

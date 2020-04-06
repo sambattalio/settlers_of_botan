@@ -1,15 +1,13 @@
 package bot.decision;
 
-import bot.NDRobotDM;
 import bot.NDHelpers;
 import bot.trade.Trading;
+import soc.debug.D;
 import soc.game.*;
 import soc.robot.*;
 import bot.*;
 
-import javax.swing.text.html.Option;
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -18,35 +16,39 @@ public class DecisionTreeDM extends SOCRobotDM {
 	private NDRobotBrain brain;
 
 	private Trading trades;
-	
+
     public DecisionTreeDM(NDRobotBrain br) {
         super(br);
-        
+
         trades = new Trading(br);
         brain = br;
     }
 
     @Override
-    public void planStuff(int strategy) { 
-        if( LongestRoadStrategy.shouldUse(brain.getGame(), brain.getOurPlayerData()) ) {
-            addToPlan(LongestRoadStrategy.plan(this));
-        } else if(LargestArmyStrategy.shouldUse(brain.getGame(), brain.getOurPlayerData())) {
-            addToPlan(LargestArmyStrategy.plan(this));
-        } else {
-            addToPlan(DefaultStrategy.plan(this));
+    public void planStuff(int strategy) {
+        try {
+            if (LongestRoadStrategy.shouldUse(game, brain.getOurPlayerData())) {
+                addToPlan(LongestRoadStrategy.plan(this));
+            } else if (LargestArmyStrategy.shouldUse(game, brain.getOurPlayerData())) {
+                addToPlan(LargestArmyStrategy.plan(this));
+            } else {
+                addToPlan(DefaultStrategy.plan(this));
+            }
+        } catch(Exception e) {
+            D.ebugPrintStackTrace(e, e.toString());
         }
     }
-    
+
     public NDRobotBrain getBrain() {
-    	return brain;
+        return brain;
     }
-    
+
     public Trading getTrades() {
     	return trades;
     }
 
     protected void addToPlan(SOCPossiblePiece piece) {
-        if(piece == null) return;
+        if (piece == null) return;
         this.buildingPlan.add(piece);
     }
 
@@ -63,9 +65,9 @@ public class DecisionTreeDM extends SOCRobotDM {
         private DecisionTreeHelpers() {
 
         }
-        
+
         public ResourceSet getPlayerResources() {
-        	return brain.getOurPlayerData().getResources();
+            return brain.getOurPlayerData().getResources();
         }
 
         public boolean haveResourcesForRoadAndSettlement() {
@@ -78,7 +80,7 @@ public class DecisionTreeDM extends SOCRobotDM {
 
         public boolean haveResourcesFor(int type) {
             ResourceSet set = brain.getOurPlayerData().getResources();
-            switch(type) {
+            switch (type) {
                 case SOCPossiblePiece.ROAD:
                     return set.getAmount(SOCResourceConstants.CLAY) >= 1 &&
                             set.getAmount(SOCResourceConstants.WOOD) >= 1;
@@ -99,16 +101,18 @@ public class DecisionTreeDM extends SOCRobotDM {
         }
 
         public boolean canBuildSettlement() {
-            return NDHelpers.canBuildSettlement(brain.getGame(), brain.getOurPlayerData().getPlayerNumber());
+            return NDHelpers.canBuildSettlement(game, brain.getOurPlayerData().getPlayerNumber());
         }
 
         public Optional<SOCPossibleSettlement> findQualitySettlementFor(List<Integer> resources) {
-            return Optional.ofNullable(NDHelpers.bestPossibleSettlement(brain.getGame(), brain.getOurPlayerData(), resources));
+            D.ebugPrintln("Finding quality settlement");
+            return Optional.ofNullable(NDHelpers.bestPossibleSettlement(game, brain.getOurPlayerData(), resources));
         }
 
         public Optional<SOCPossibleCity> findQualityCityFor(List<Integer> resources) {
+            D.ebugPrintln("Finding quality city");
             Vector<SOCSettlement> ourSettlements = brain.getOurPlayerData().getSettlements();
-            if(resources.isEmpty()) {
+            if (resources.isEmpty()) {
                 return ourSettlements.stream()
                         .map(SOCPlayingPiece::getCoordinates)
                         .sorted(Comparator.comparing(node -> NDHelpers.totalProbabilityAtNode(game, node)))
@@ -117,7 +121,7 @@ public class DecisionTreeDM extends SOCRobotDM {
             }
             return ourSettlements.stream()
                     .filter(settlement -> settlement.getAdjacentHexes().stream()
-                            .anyMatch(hex -> resources.contains(brain.getGame().getBoard().getHexTypeFromCoord(hex)))
+                            .anyMatch(hex -> resources.contains(game.getBoard().getHexTypeFromCoord(hex)))
                     )
                     .map(SOCPlayingPiece::getCoordinates)
                     .sorted(Comparator.comparing(node -> NDHelpers.totalProbabilityAtNode(game, node)))
@@ -133,9 +137,61 @@ public class DecisionTreeDM extends SOCRobotDM {
             return findQualityCityFor(Collections.emptyList());
         }
 
-        public Optional<SOCPossiblePiece> findQualityRoad(boolean considerLongestRoad) {
-            if (considerLongestRoad) return Optional.ofNullable(NDHelpers.bestPossibleLongRoad(brain.getGame(), brain.getOurPlayerData()));
-            else return Optional.empty(); //TODO add quality road search based on resources like with settlements & cities
+        public Optional<SOCPossiblePiece> findQualityRoadForLongestRoad() {
+            D.ebugPrintln("Finding quality road for longest road");
+            return Optional.ofNullable(NDHelpers.bestPossibleLongRoad(game, brain.getOurPlayerData()));
+        }
+
+        public Optional<SOCPossiblePiece> findQualityRoadForExpansion() {
+            D.ebugPrintln("Finding quality road for expansion");
+            Set<Integer> othersSettlements = game.getBoard().getSettlements().stream()
+                    .filter(socSettlement -> socSettlement.getPlayerNumber() != brain.getOurPlayerNumber())
+                    .map(SOCPlayingPiece::getCoordinates)
+                    .collect(Collectors.toSet());
+            Set<Integer> invalidSettlements = othersSettlements.stream()
+                    .flatMap(node -> Stream.concat(Stream.of(node), game.getBoard().getAdjacentNodesToNode(node).stream()))
+                    .collect(Collectors.toSet());
+            Set<Integer> occupiedRoads = game.getBoard().getRoadsAndShips().stream()
+                    .map(SOCPlayingPiece::getCoordinates)
+                    .collect(Collectors.toSet());
+            HashSet<Integer> visitedNodes = new HashSet<>();
+            // stores the road that was used to get to a node
+            HashMap<Integer, Integer> getTo = new HashMap<>();
+
+            // start frontier as all the nodes that are one buildable road away from where we already have roads
+            // and set all getTo
+            HashSet<Integer> frontier = brain.getOurPlayerData().getRoadNodes().stream()
+                    .filter(node -> !othersSettlements.contains(node))
+                    .flatMap(node -> game.getBoard().getAdjacentEdgesToNode(node).stream()
+                            .filter(edge -> !occupiedRoads.contains(edge))
+                            // set getTo if not already set
+                            .peek(edge -> getTo.put(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.getOrDefault(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), edge)))
+                            .map(edge -> game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node))
+                    )
+                    .filter(node -> !othersSettlements.contains(node))
+                    .collect(Collectors.toCollection(HashSet::new));
+
+            Predicate<Integer> isPossibleSettlement = node -> !invalidSettlements.contains(node);
+            //TODO choose to take a further settlement if it is much better than closer one
+            for(int length = 1; length < 5; length++) {
+                if(frontier.stream().anyMatch(isPossibleSettlement)) {
+                    return frontier.stream()
+                            .filter(isPossibleSettlement)
+                            .sorted() //TODO add value comparison, and consider long term growth
+                            .findFirst()
+                            .map(node -> new SOCPossibleRoad(brain.getOurPlayerData(), getTo.get(node), null));
+                }
+                visitedNodes.addAll(frontier);
+                frontier = frontier.stream()
+                        .flatMap(node -> game.getBoard().getAdjacentEdgesToNode(node).stream()
+                                .filter(edge -> !occupiedRoads.contains(edge))
+                                .peek(edge -> getTo.put(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.getOrDefault(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.get(node))))
+                                .map(edge -> game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node))
+                        )
+                        .filter(node -> !othersSettlements.contains(node) && !visitedNodes.contains(node))
+                        .collect(Collectors.toCollection(HashSet::new));
+            }
+            return Optional.empty(); //TODO add quality road search based on resources like with settlements & cities
         }
     }
 }

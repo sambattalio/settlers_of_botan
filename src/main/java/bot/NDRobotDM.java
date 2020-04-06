@@ -1,8 +1,10 @@
 package bot;
 
-import soc.game.*;
-import soc.robot.*;
 import soc.debug.D;
+import soc.game.SOCGame;
+import soc.game.SOCPlayingPiece;
+import soc.game.SOCRoutePiece;
+import soc.robot.*;
 
 import java.util.*;
 
@@ -14,7 +16,8 @@ public class NDRobotDM extends SOCRobotDM {
 
     /**
      * A strategy that chooses to build roads to the nearest open settlement spot and then settlements at that location
-     * @param strategy  an integer that determines which strategy is used
+     *
+     * @param strategy an integer that determines which strategy is used
      */
     @Override
     public void planStuff(int strategy) {
@@ -35,22 +38,19 @@ public class NDRobotDM extends SOCRobotDM {
             if (piece.getType() == SOCPlayingPiece.ROAD) {
                 Vector<Integer> searchResult = BFS(this.game, piece.getCoordinates());
                 //TODO refactor to pass in best path in some form so that even less is explored, and to take in nodes instead of edges
-                D.ebugPrintln("Best on edge " + piece.getCoordinates() + " was " + searchResult);
+
                 // has pre-existing road first so we remove it
                 if (searchResult.size() > 0) searchResult.removeElementAt(0);
                 // Check if better than the best path
                 if (comparePaths(this.game, searchResult, bestPath) > 0) {
                     bestPath = searchResult;
-                    D.ebugPrintln("Best path set:" + bestPath.toString());
                 }
             }
         }
 
-        D.ebugPrintln("Best at end" + bestPath.toString());
-
         // if we have settlements left to place
         // TODO find settlements left constant
-        if(ourPlayerData.getSettlements().size() < 5) {
+        if (ourPlayerData.getSettlements().size() < 5) {
             // change last coord to settlement as it will always be one from our BFS
             buildingPlan.push(new SOCPossibleSettlement(ourPlayerData, bestPath.lastElement(), null));
         } else {
@@ -71,7 +71,7 @@ public class NDRobotDM extends SOCRobotDM {
      * @return if there is no settlement there or at any of the adjacent nodes
      */
     public static boolean canBuildSettlement(SOCGame game, final int coord) {
-        if(!game.getBoard().isNodeOnLand(coord)) return false;
+        if (!game.getBoard().isNodeOnLand(coord)) return false;
 
         if (game.getBoard().settlementAtNode(coord) != null) return false;
 
@@ -86,7 +86,7 @@ public class NDRobotDM extends SOCRobotDM {
      * Returns if legally possible to hypothetically place a road at edgeCoord
      *
      * @param game
-     * @param edgeCoord the edge to check
+     * @param edgeCoord  the edge to check
      * @param sourceEdge the edge that we have gotten to this node from
      * @return if there is no road already there
      */
@@ -102,7 +102,7 @@ public class NDRobotDM extends SOCRobotDM {
         List<Integer> nodesOnEdgeTwo = game.getBoard().getAdjacentNodesToEdge(sourceEdge);
         Optional<Integer> connectingNode = nodesOnEdgeOne.stream().filter(nodesOnEdgeTwo::contains).findFirst();
 
-        if(!connectingNode.isPresent()) return false; // edges do not touch
+        if (!connectingNode.isPresent()) return false; // edges do not touch
 
         // Cannot build a road through a settlement that is not ours
         SOCPlayingPiece settlement = game.getBoard().settlementAtNode(connectingNode.get());
@@ -135,32 +135,26 @@ public class NDRobotDM extends SOCRobotDM {
 
             // Check for possible settlements
             for (int node : game.getBoard().getAdjacentNodesToEdge(current.lastElement())) {
-                D.ebugPrintln("Considering node " + node + " onto " + current);
                 if (canBuildSettlement(game, node)) {
-                    D.ebugPrintln("Can build settlement at " + node);
 
                     Vector<Integer> next = new Vector<>(current);
                     // add the settlement to the end of the path leading here
                     next.add(node);
                     if (comparePaths(game, next, bestPath) > 0) {
                         bestPath = next;
-                        D.ebugPrintln("Best so far was: " + bestPath.toString());
                     }
                 }
             }
 
             // Check for new roads to build to add to queue
             for (int edge : game.getBoard().getAdjacentEdgesToEdge(current.lastElement())) {
-                D.ebugPrintln("Adjacent edge to " + current.lastElement() + ": " + edge);
                 boolean isLoop = current.contains(edge);
                 if (canBuildRoad(game, edge, current.lastElement()) && !isLoop) {
-                    D.ebugPrintln("Can build road on " + edge);
                     Vector<Integer> newPath = new Vector<>(current);
                     newPath.add(edge);
                     queue.add(newPath);
                 }
             }
-
         }
 
         return bestPath;
@@ -197,6 +191,7 @@ public class NDRobotDM extends SOCRobotDM {
     /**
      * Compares the potential location of two settlements based on the values of the hexes around them
      * Does not check the validity of the settlements
+     *
      * @param one
      * @param two
      * @return

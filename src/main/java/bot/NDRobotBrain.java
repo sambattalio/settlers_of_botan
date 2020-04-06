@@ -16,7 +16,7 @@ import soc.game.SOCResourceSet;
 import soc.debug.D;
 
 public class NDRobotBrain extends SOCRobotBrain {
-    
+
 
     public NDRobotBrain(SOCRobotClient rc, SOCRobotParameters params, SOCGame ga, CappedQueue<SOCMessage> mq) {
         super(rc, params, ga, mq);
@@ -65,6 +65,10 @@ public class NDRobotBrain extends SOCRobotBrain {
     	}
     	
     	return result && !resourcesBefore.equals(resourcesAfter);
+    }
+
+    public void setFour(boolean b) {
+        //TODO @sbattalio
     }
     
     /*public void check() {

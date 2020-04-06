@@ -17,8 +17,6 @@ public class Trading extends SOCRobotNegotiator {
 	private SOCPlayer player;
 
 	public static boolean shouldFour = false;
-	public static boolean shouldPort = false;
-	public static boolean shouldTwo = false;
 
 	public Trading(NDRobotBrain br) {
 		super(br);
@@ -399,7 +397,34 @@ public class Trading extends SOCRobotNegotiator {
 		return -1;
 	}
 
-	public boolean attemptPortTrade(SOCResourceSet whatIsNeeded, SOCPossiblePiece targetPiece) {
+        public boolean hasPort() {
+            boolean portFlags[] = this.player.getPortFlags();
+
+            for (int portType = SOCBoard.MISC_PORT; portType <= SOCBoard.WOOD_PORT; portType++) {
+                if (portFlags[portType]) return true;
+            }
+            return false;
+        }
+
+        public boolean portWorthIt(SOCPossiblePiece targetPiece) {
+	    SOCResourceSet actualToBuild = targetPiece.getResourcesToBuild();
+            SOCResourceSet playerResources  = this.player.getResources();
+            boolean portFlags[] = this.player.getPortFlags();
+            
+            for (int portType = SOCBoard.MISC_PORT; portType <= SOCBoard.WOOD_PORT; portType++) {
+                if (!portFlags[portType]) continue;
+
+                int threshold = (portType == SOCBoard.MISC_PORT) ? 3 : 2;
+
+                if (playerResources.getAmount(portType) - actualToBuild.getAmount(portType) > threshold) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+	public SOCResourceSet attemptPortTrade(SOCResourceSet whatIsNeeded, SOCPossiblePiece targetPiece) {
 		SOCResourceSet resourcesToBuild = whatIsNeeded;
 		SOCResourceSet actualToBuild = targetPiece.getResourcesToBuild();
 		SOCResourceSet playerResources  = this.player.getResources();
@@ -465,8 +490,8 @@ public class Trading extends SOCRobotNegotiator {
 			}
 		}
 
-		// return if port trading successfully fuffilled needed pieces
-		return resourcesToBuild.getTotal() == 0;
+		// return leftover resources needed
+                return resourcesToBuild;
 	}
 
 	@Override
@@ -682,9 +707,6 @@ public class Trading extends SOCRobotNegotiator {
 				return offer;
 			}
 			D.ebugPrintln("Claim Match");
-		} else if (shouldPort) {
-			attemptPortTrade(needed, targetPiece);
-
 		} else if (shouldFour && resources.getTotal() > 5) {
 			D.ebugPrintln("Attempt Four");
 			for (int r : resourceArray) {

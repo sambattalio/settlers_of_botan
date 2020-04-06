@@ -17,7 +17,9 @@ public class Trading extends SOCRobotNegotiator {
     private int playerNo; 
     private SOCPlayer player;
 
-    public static boolean shouldFour = false;    
+    public static boolean shouldFour = false;
+    public static boolean shouldPort = false; 
+    public static boolean shouldTwo = false;
 
     public Trading(NDRobotBrain br) {
         super(br);
@@ -681,6 +683,9 @@ public class Trading extends SOCRobotNegotiator {
             	return offer;
             }
 	    D.ebugPrintln("Claim Match");
+        } else if (shouldTradePort) {
+            attemptPortTrade(needed, targetPiece);
+            
         } else if (shouldFour && resources.getTotal() > 5) {
 	    D.ebugPrintln("Attempt Four");
 	    for (int r : resourceArray) {

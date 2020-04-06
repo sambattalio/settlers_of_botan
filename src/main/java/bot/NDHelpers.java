@@ -192,7 +192,6 @@ public class NDHelpers {
                 .map(SOCPlayingPiece::getCoordinates)
                 .collect(Collectors.toSet());
         Set<Set<Integer>> roadNetworks = getRoadNetworks(game, player);
-        D.ebugPrintln("Networks was size " + roadNetworks.size());
         if (roadNetworks.size() == 2) {
             Iterator<Set<Integer>> iterator = roadNetworks.iterator();
             Set<Integer> firstBranching = iterator.next().stream()
@@ -210,22 +209,28 @@ public class NDHelpers {
             }
         }
 
-        // for now the strat is to try to build off of the longest road(s)
+        // for now the strat is to try to build off of the longest road
         // of the player
         player.calcLongestRoad2();
-        Vector<SOCLRPathData> pathData = player.getLRPaths();
+        Optional<SOCLRPathData> pathData = player.getLRPaths().stream().max(Comparator.comparing(SOCLRPathData::getLength));
 
-        for (SOCLRPathData path : pathData) {
-            D.ebugPrintln("LR option " + path.getLength());
+        if (pathData.isPresent()) {
+            SOCLRPathData path = pathData.get();
             // check if can build off beginning
 
-            List<Integer> possibleFront = findPossibleRoads(game, path.getBeginning()).stream().filter(player::isPotentialRoad).collect(Collectors.toList());
+            //TODO findPossibleRoads(game, path.getBeginning()) vs game.getBoard().getAdjacentEdgesToNode(
+            //TODO snake in direction of other settlement and good open areas / nodes
+            List<Integer> possibleFront = game.getBoard().getAdjacentEdgesToNode(path.getBeginning()).stream()
+                    .filter(player::isPotentialRoad)
+                    .collect(Collectors.toList());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
             if (possibleFront.size() != 0) return new SOCPossibleRoad(player, possibleFront.get(0), null);
 
             // same but end...
-            List<Integer> possibleEnd = findPossibleRoads(game, path.getEnd()).stream().filter(player::isPotentialRoad).collect(Collectors.toList());
+            List<Integer> possibleEnd = game.getBoard().getAdjacentEdgesToNode(path.getEnd()).stream()
+                    .filter(player::isPotentialRoad)
+                    .collect(Collectors.toList());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
             if (possibleEnd.size() != 0) return new SOCPossibleRoad(player, possibleEnd.get(0), null);

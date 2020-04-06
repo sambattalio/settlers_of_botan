@@ -1,11 +1,13 @@
 package bot;
 
-import soc.disableDebug.D;
+import soc.debug.D;
 import soc.game.*;
 import soc.robot.SOCPossibleRoad;
 import soc.robot.SOCPossibleSettlement;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.Math.abs;
 
@@ -156,7 +158,7 @@ public class NDHelpers {
 
 
     /**
-     * Finds possible roads that can be built from given coord
+     * Finds possible roads that can be built from given edge coord
      *
      * @param game
      * @param edgeCoord edge to build off of
@@ -183,29 +185,84 @@ public class NDHelpers {
      * @return best road to build
      */
     public static SOCPossibleRoad bestPossibleLongRoad(SOCGame game, SOCPlayer player) {
-        // for now the strat is to try to build off of the longest road(s)
-        // of the player
-        // TODO maybe import ?
-        Vector<SOCLRPathData> pathData = game.getPlayer(player.getPlayerNumber()).getLRPaths();
+        // TODO refactor
+        //check if the roads of our first settlement can connect to the roads of our second settlement
+        Set<Integer> notOurRoads = game.getBoard().getRoadsAndShips().stream()
+                .filter(road -> !road.getPlayer().equals(player))
+                .map(SOCPlayingPiece::getCoordinates)
+                .collect(Collectors.toSet());
+        Set<Set<Integer>> roadNetworks = getRoadNetworks(game, player);
+        if (roadNetworks.size() == 2) {
+            Iterator<Set<Integer>> iterator = roadNetworks.iterator();
+            Set<Integer> firstBranching = iterator.next().stream()
+                    .flatMap(edge -> game.getBoard().getAdjacentEdgesToEdge(edge).stream())
+                    .filter(edge -> !notOurRoads.contains(edge))
+                    .collect(Collectors.toSet());
+            Set<Integer> secondBranching = iterator.next().stream()
+                    .flatMap(edge -> game.getBoard().getAdjacentEdgesToEdge(edge).stream())
+                    .filter(edge -> !notOurRoads.contains(edge))
+                    .collect(Collectors.toSet());
+            TreeSet<Integer> union = new TreeSet<>(firstBranching);
+            union.retainAll(secondBranching);
+            if(union.size() > 0) {
+                return new SOCPossibleRoad(player, union.first(), null);
+            }
+        }
 
-        for (SOCLRPathData path : pathData) {
+        // for now the strat is to try to build off of the longest road
+        // of the player
+        player.calcLongestRoad2();
+        Optional<SOCLRPathData> pathData = player.getLRPaths().stream().max(Comparator.comparing(SOCLRPathData::getLength));
+
+        if (pathData.isPresent()) {
+            SOCLRPathData path = pathData.get();
             // check if can build off beginning
 
-            Vector<Integer> possibleFront = findPossibleRoads(game, path.getBeginning());
+            //TODO findPossibleRoads(game, path.getBeginning()) vs game.getBoard().getAdjacentEdgesToNode(
+            //TODO snake in direction of other settlement and good open areas / nodes
+            List<Integer> possibleFront = game.getBoard().getAdjacentEdgesToNode(path.getBeginning()).stream()
+                    .filter(player::isPotentialRoad)
+                    .collect(Collectors.toList());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
             if (possibleFront.size() != 0) return new SOCPossibleRoad(player, possibleFront.get(0), null);
 
             // same but end...
-            Vector<Integer> possibleEnd = findPossibleRoads(game, path.getEnd());
+            List<Integer> possibleEnd = game.getBoard().getAdjacentEdgesToNode(path.getEnd()).stream()
+                    .filter(player::isPotentialRoad)
+                    .collect(Collectors.toList());
             // for now just return the first possible... later we need to prolly
             // search this shizz our
             if (possibleEnd.size() != 0) return new SOCPossibleRoad(player, possibleEnd.get(0), null);
         }
 
-        D.ebugPrintln("Found none");
-
         return null;
+    }
+
+    private static Set<Set<Integer>> getRoadNetworks(SOCGame game, SOCPlayer player) {
+        return Stream.concat(player.getSettlements().stream(), player.getCities().stream())
+                .map(SOCPlayingPiece::getCoordinates)
+                .map(coord -> getAllRoadsConnected(coord, game, player))
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    private static Set<Integer> getAllRoadsConnected(int nodeCoord, SOCGame game, SOCPlayer player) {
+        Set<Integer> connected = new HashSet<>();
+        TreeSet<Integer> frontier = game.getBoard().getAdjacentEdgesToNode(nodeCoord).stream()
+                .filter(edge -> player.getRoadsAndShips().stream().anyMatch(road -> road.getCoordinates() == edge))
+                .collect(Collectors.toCollection(TreeSet::new));
+        while(!frontier.isEmpty()) {
+            Integer consideredEdge = frontier.first();
+            frontier.remove(consideredEdge);
+            connected.add(consideredEdge);
+            frontier.addAll(
+                    game.getBoard().getAdjacentEdgesToEdge(consideredEdge).stream()
+                            .filter(edge -> player.getRoadsAndShips().stream().anyMatch(road -> road.getCoordinates() == edge))
+                            .filter(edge -> !connected.contains(edge) && !frontier.contains(edge))
+                            .collect(Collectors.toSet())
+            );
+        }
+        return connected;
     }
 
     /**
@@ -303,6 +360,9 @@ public class NDHelpers {
      * @return true if can build to longest road
      */
     public static boolean isLongestRoadPossible(SOCGame game, int playerNo) {
+        if(game.getPlayer(playerNo).getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT) {
+            return false;
+        }
         return isCompetitiveForLongestRoad(game, playerNo);
 
         // here we know we are competitive... now lets see if we can reach

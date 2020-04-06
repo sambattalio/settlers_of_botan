@@ -27,6 +27,7 @@ import static soc.robot.SOCPossiblePiece.CARD;
 public class LongestRoadStrategy {
 
     public static boolean shouldUse(SOCGame game, SOCPlayer player) {
+    	//TODO check how far ahead we are and make sure we are not trapped
         return NDHelpers.isLongestRoadPossible(game, player.getPlayerNumber());
     };
 
@@ -38,14 +39,18 @@ public class LongestRoadStrategy {
         //TODO Check if road is threatened before performing other actions
         if (decisionTreeDM.getHelpers().haveResourcesForRoadAndSettlement()) {
             D.ebugPrintln("----- Road & Settlement -----");
-            return decisionTreeDM.getHelpers().findQualityRoadForLongestRoad().orElse(null);
+            Optional<SOCPossiblePiece> result = decisionTreeDM.getHelpers().findQualityRoadForLongestRoad();
+            //TODO add other checks like this
+            if(result.isPresent()) {
+            	return result.get();
+			}
         }
 
         if (decisionTreeDM.getHelpers().canBuildSettlement() && (possibleSettlement = decisionTreeDM.getHelpers().findQualitySettlementFor(Arrays.asList(WOOD, CLAY))).isPresent()) {
         	D.ebugPrintln("Maybe Settlement");
         	if(decisionTreeDM.getHelpers().haveResourcesFor(SETTLEMENT)) {
         	    D.ebugPrintln("----- Settlement -----");
-		    return possibleSettlement.get();
+		    	return possibleSettlement.get();
         	} else {
 
 	        	while(decisionTreeDM.getBrain().trade(new SOCPossibleSettlement(null, -1, null))){

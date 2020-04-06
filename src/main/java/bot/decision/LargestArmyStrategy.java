@@ -23,6 +23,7 @@ import soc.debug.D;
 
 public class LargestArmyStrategy {
     public static boolean shouldUse(SOCGame game, SOCPlayer player) {
+    	//TODO add check for number of cards left
         return NDHelpers.isCompetitiveForLargestArmy(game, player.getPlayerNumber());
     }
 

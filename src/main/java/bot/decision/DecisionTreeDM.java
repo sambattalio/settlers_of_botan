@@ -17,6 +17,8 @@ public class DecisionTreeDM extends SOCRobotDM {
 
 	private Trading trades;
 
+    int callCount = 0;
+
     public DecisionTreeDM(NDRobotBrain br) {
         super(br);
 
@@ -26,6 +28,7 @@ public class DecisionTreeDM extends SOCRobotDM {
 
     @Override
     public void planStuff(int strategy) {
+        D.ebugPrintln("----- Plan Stuff " + callCount++ + " -----");
         try {
             if (LongestRoadStrategy.shouldUse(game, brain.getOurPlayerData())) {
                 addToPlan(LongestRoadStrategy.plan(this));
@@ -71,6 +74,11 @@ public class DecisionTreeDM extends SOCRobotDM {
         }
 
         public boolean haveResourcesForRoadAndSettlement() {
+            if(getPlayer().getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT ||
+                    getPlayer().getPieces().stream().filter(piece -> piece instanceof SOCSettlement).count() == SOCPlayer.SETTLEMENT_COUNT
+            ) {
+                return false;
+            }
             ResourceSet set = brain.getOurPlayerData().getResources();
             return set.getAmount(SOCResourceConstants.CLAY) >= 2 &&
                     set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
@@ -82,21 +90,35 @@ public class DecisionTreeDM extends SOCRobotDM {
             ResourceSet set = brain.getOurPlayerData().getResources();
 	    D.ebugPrintln("Brain thinks bot has: " + set);
             switch (type) {
-                case SOCPossiblePiece.ROAD:
+                case SOCPossiblePiece.ROAD: {
+                    if(getPlayer().getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT) {
+                        return false;
+                    }
                     return set.getAmount(SOCResourceConstants.CLAY) >= 1 &&
                             set.getAmount(SOCResourceConstants.WOOD) >= 1;
-                case SOCPossiblePiece.SETTLEMENT:
+                }
+                case SOCPossiblePiece.SETTLEMENT: {
+                    if(getPlayer().getPieces().stream().filter(piece -> piece instanceof SOCSettlement).count() == SOCPlayer.SETTLEMENT_COUNT) {
+                        return false;
+                    }
                     return set.getAmount(SOCResourceConstants.CLAY) >= 1 &&
                             set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
                             set.getAmount(SOCResourceConstants.WHEAT) >= 1 &&
                             set.getAmount(SOCResourceConstants.WOOD) >= 1;
-                case SOCPossiblePiece.CITY:
+                }
+                case SOCPossiblePiece.CITY: {
+                    if(getPlayer().getPieces().stream().filter(piece -> piece instanceof SOCCity).count() == SOCPlayer.CITY_COUNT) {
+                        return false;
+                    }
                     return set.getAmount(SOCResourceConstants.ORE) >= 3 &&
                             set.getAmount(SOCResourceConstants.WHEAT) >= 2;
-                case SOCPossiblePiece.CARD:
+                }
+                case SOCPossiblePiece.CARD: {
+                    //TODO check if cards are left
                     return set.getAmount(SOCResourceConstants.ORE) >= 1 &&
                             set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
                             set.getAmount(SOCResourceConstants.WHEAT) >= 1;
+                }
             }
             return false;
         }

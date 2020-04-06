@@ -56,3 +56,7 @@ Largest Army Strategy
 ![Largest Army](/img/LA.jpg)
 Default Expansion Strategy
 ![Default](/img/Default.jpg)
+
+# Trading
+
+The trading strategy initially determines what resources the bot needs in order to build the piece it has designated as its next desired piece through the decision tree. It attempts to trade with any ports the bot currently has settlements on in order to obtain this needed piece. The bot will perform port trades until they are determined to no longer helpful. Once this is complete, the bot attempts to perform trades with other players. As it is rarely beneficial to the bot to trade more than one resource for one resource with other players, it will continuously attempt to perform one for one trades with players until it determines offering to players is no longer beneficial. If the bot still doesn’t have the desired resources for the piece, it will try a four for one resource trade with the bank. If all these actions are completed and the resources still aren’t available, the bot will move on to the next piece it desires and start the process over.

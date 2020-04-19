@@ -20,6 +20,9 @@ public class DefaultStrategy {
             return decisionTreeDM.getHelpers().findQualityRoadForExpansion().orElse(null);
         }
 
+        // check what port we got cookin' if any
+        //boolean shouldPort = decisionTreeDM.getBrain();
+
 	if (decisionTreeDM.getHelpers().canBuildSettlement()) {
         	D.ebugPrintln("Maybe Settlement");
 		possibleSettlement = decisionTreeDM.getHelpers().findQualitySettlement();
@@ -27,7 +30,7 @@ public class DefaultStrategy {
         		D.ebugPrintln("----- Settlement -----");
 		    return possibleSettlement.get();
         	} else {
-
+                        
 	        	while(decisionTreeDM.getBrain().trade(new SOCPossibleSettlement(null, -1, null))){
 	        		continue;
 	        	}

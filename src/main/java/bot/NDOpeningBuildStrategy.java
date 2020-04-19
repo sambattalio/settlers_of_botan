@@ -25,7 +25,7 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
     private final static int[] NODE_3_AWAY = { -9, 0x03, 0x33, 0x30, -0x03, -0x33, -0x30 };
     private final static int[] NODE_4_AWAY = { -9, 0x04, 0x44, 0x40, -0x04, -0x44, -0x40 };
 
-    private HashMap<Integer, Integer> probMap = new HashMap<>();
+    public static HashMap<Integer, Integer> probMap = new HashMap<>();
 
     private Vector<Integer> roadsToBuild;
 

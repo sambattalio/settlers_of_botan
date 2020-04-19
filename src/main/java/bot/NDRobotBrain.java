@@ -1,7 +1,6 @@
 package bot;
 
 import bot.decision.DecisionTreeDM;
-import bot.trade.Trading;
 
 import soc.game.SOCGame;
 import soc.message.SOCMessage;
@@ -10,8 +9,6 @@ import soc.robot.SOCRobotClient;
 import soc.util.CappedQueue;
 import soc.util.SOCRobotParameters;
 import soc.robot.SOCPossiblePiece;
-import soc.game.SOCTradeOffer;
-import soc.game.SOCResourceSet;
 
 import soc.debug.D;
 
@@ -26,7 +23,7 @@ public class NDRobotBrain extends SOCRobotBrain {
         super.setOurPlayerData();
 
         decisionMaker = new DecisionTreeDM(this);
-        negotiator = new Trading(this);
+        negotiator = new NDRobotNegotiator(this);
         monopolyStrategy = new NDMonopolyStrategy(game, ourPlayerData);
         robberStrategy = new NDRobberStrategy(game, ourPlayerData, this, rand);
         discardStrategy = new NDDiscardStrategy(game, ourPlayerData, this, rand);
@@ -50,7 +47,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     }
 
     public void setFour(boolean should){
-	Trading.shouldFour = should;
+	NDRobotNegotiator.shouldFour = should;
     }
     
     public boolean trade(SOCPossiblePiece p) {

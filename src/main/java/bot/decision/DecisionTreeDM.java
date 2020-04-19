@@ -1,7 +1,7 @@
 package bot.decision;
 
 import bot.NDHelpers;
-import bot.trade.Trading;
+import bot.NDRobotNegotiator;
 import soc.debug.D;
 import soc.game.*;
 import soc.robot.*;
@@ -15,14 +15,14 @@ import java.util.stream.Stream;
 public class DecisionTreeDM extends SOCRobotDM {
 	private NDRobotBrain brain;
 
-	private Trading trades;
+	private NDRobotNegotiator trades;
 
     int callCount = 0;
 
     public DecisionTreeDM(NDRobotBrain br) {
         super(br);
 
-        trades = new Trading(br);
+        trades = new NDRobotNegotiator(br);
         brain = br;
     }
 
@@ -46,7 +46,7 @@ public class DecisionTreeDM extends SOCRobotDM {
         return brain;
     }
 
-    public Trading getTrades() {
+    public NDRobotNegotiator getTrades() {
     	return trades;
     }
 

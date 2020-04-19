@@ -4,7 +4,6 @@ import soc.game.SOCGame;
 import soc.game.SOCPlayer;
 
 import bot.NDHelpers;
-import bot.trade.Trading;
 
 import soc.robot.SOCPossibleCard;
 import soc.robot.SOCPossibleCity;

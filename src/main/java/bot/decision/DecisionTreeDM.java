@@ -1,7 +1,7 @@
 package bot.decision;
 
 import bot.NDHelpers;
-import bot.trade.Trading;
+import bot.NDRobotNegotiator;
 import soc.debug.D;
 import soc.game.*;
 import soc.robot.*;
@@ -15,14 +15,14 @@ import java.util.stream.Stream;
 public class DecisionTreeDM extends SOCRobotDM {
 	private NDRobotBrain brain;
 
-	private Trading trades;
+	private NDRobotNegotiator trades;
 
     int callCount = 0;
 
     public DecisionTreeDM(NDRobotBrain br) {
         super(br);
 
-        trades = new Trading(br);
+        trades = new NDRobotNegotiator(br);
         brain = br;
     }
 
@@ -30,12 +30,16 @@ public class DecisionTreeDM extends SOCRobotDM {
     public void planStuff(int strategy) {
         D.ebugPrintln("----- Plan Stuff " + callCount++ + " -----");
         try {
-            if (LongestRoadStrategy.shouldUse(game, brain.getOurPlayerData())) {
-                addToPlan(LongestRoadStrategy.plan(this));
-            } else if (LargestArmyStrategy.shouldUse(game, brain.getOurPlayerData())) {
-                addToPlan(LargestArmyStrategy.plan(this));
-            } else {
-                addToPlan(DefaultStrategy.plan(this));
+            switch(DecisionTreeType.whichUse(game, brain.getOurPlayerData())) {
+                case LONGEST_ROAD:
+                    addToPlan(LongestRoadStrategy.plan(this));
+                    break;
+                case LARGEST_ARMY:
+                    addToPlan(LargestArmyStrategy.plan(this));
+                    break;
+                case DEFAULT:
+                    addToPlan(DefaultStrategy.plan(this));
+                    break;
             }
         } catch(Exception e) {
             D.ebugPrintStackTrace(e, e.toString());
@@ -46,7 +50,7 @@ public class DecisionTreeDM extends SOCRobotDM {
         return brain;
     }
 
-    public Trading getTrades() {
+    public NDRobotNegotiator getTrades() {
     	return trades;
     }
 

@@ -91,8 +91,9 @@ public class DecisionTreeDM extends SOCRobotDM {
         }
 
         public boolean haveResourcesFor(int type) {
+            //TODO migrate into helpers class
             ResourceSet set = brain.getOurPlayerData().getResources();
-	    D.ebugPrintln("Brain thinks bot has: " + set);
+            D.ebugPrintln("Brain thinks bot has: " + set);
             switch (type) {
                 case SOCPossiblePiece.ROAD: {
                     if(getPlayer().getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT) {
@@ -125,6 +126,37 @@ public class DecisionTreeDM extends SOCRobotDM {
                 }
             }
             return false;
+        }
+
+        public SOCResourceSet getResourcesFor(int type) {
+            SOCResourceSet set = new SOCResourceSet();
+            switch (type) {
+                case SOCPossiblePiece.ROAD: {
+                    set.add(1, SOCResourceConstants.CLAY);
+                    set.add(1, SOCResourceConstants.WOOD);
+                    return set;
+                }
+                case SOCPossiblePiece.SETTLEMENT: {
+                    set.add(1, SOCResourceConstants.CLAY);
+                    set.add(1, SOCResourceConstants.WOOD);
+                    set.add(1, SOCResourceConstants.SHEEP);
+                    set.add(1, SOCResourceConstants.WHEAT);
+                    return set;
+                }
+                case SOCPossiblePiece.CITY: {
+                    set.add(3, SOCResourceConstants.ORE);
+                    set.add(2, SOCResourceConstants.WHEAT);
+                    return set;
+                }
+                case SOCPossiblePiece.CARD: {
+                    //TODO check if cards are left
+                    set.add(1, SOCResourceConstants.ORE);
+                    set.add(1, SOCResourceConstants.WHEAT);
+                    set.add(1, SOCResourceConstants.SHEEP);
+                    return set;
+                }
+            }
+            return set;
         }
 
         public boolean canBuildSettlement() {

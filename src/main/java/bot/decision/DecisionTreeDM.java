@@ -30,12 +30,16 @@ public class DecisionTreeDM extends SOCRobotDM {
     public void planStuff(int strategy) {
         D.ebugPrintln("----- Plan Stuff " + callCount++ + " -----");
         try {
-            if (LongestRoadStrategy.shouldUse(game, brain.getOurPlayerData())) {
-                addToPlan(LongestRoadStrategy.plan(this));
-            } else if (LargestArmyStrategy.shouldUse(game, brain.getOurPlayerData())) {
-                addToPlan(LargestArmyStrategy.plan(this));
-            } else {
-                addToPlan(DefaultStrategy.plan(this));
+            switch(DecisionTreeType.whichUse(game, brain.getOurPlayerData())) {
+                case LONGEST_ROAD:
+                    addToPlan(LongestRoadStrategy.plan(this));
+                    break;
+                case LARGEST_ARMY:
+                    addToPlan(LargestArmyStrategy.plan(this));
+                    break;
+                case DEFAULT:
+                    addToPlan(DefaultStrategy.plan(this));
+                    break;
             }
         } catch(Exception e) {
             D.ebugPrintStackTrace(e, e.toString());

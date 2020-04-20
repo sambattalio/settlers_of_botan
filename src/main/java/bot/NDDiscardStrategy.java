@@ -64,12 +64,12 @@ public class NDDiscardStrategy extends DiscardStrategy {
         }
 
         //choose the rest based on relative rarity
-        SOCResourceSet extantResources = NDHelpers.getExtantResources(brain);
+        Map<Integer, Integer> probabilityForResource = NDHelpers.getProbabilityForResource(brain);
         return IntStream.range(SOCResourceConstants.MIN, SOCResourceConstants.MAXPLUSONE - 1)
                 .filter(discards::contains)
                 .boxed()
                 //TODO consider changing the ranking for resources - consider what we need to build the priorities?
-                .sorted(Comparator.comparing(extantResources::getAmount))
+                .sorted(Comparator.comparing(probabilityForResource::get).reversed())
                 .mapToInt(Integer::intValue)
                 .flatMap(type -> IntStream.generate(() -> type).limit(discards.getAmount(type)))
                 .limit(numDiscards)

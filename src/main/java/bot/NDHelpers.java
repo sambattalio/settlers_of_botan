@@ -14,10 +14,14 @@ import soc.robot.SOCPossibleSettlement;
 import soc.robot.SOCPossibleRoad;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.function.Predicate;
 
+
+import javax.swing.text.html.Option;
 
 import static java.lang.Math.abs;
 
@@ -128,7 +132,6 @@ public class NDHelpers {
     /**
      * Returns if a player can build a settlement
      *
-     * @param game
      * @param playerNo
      * @return true if possible to build a settlement
      */
@@ -161,26 +164,16 @@ public class NDHelpers {
      * @param resources: int array where integers are SOCResourceConstant resource types
      * @return coords vector
      */
-    public static Vector<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, List<Integer> resources) {
+    public static List<Integer> findPotentialSettlementsFor(SOCGame game, int playerNo, List<Integer> resources) {
         if (resources.isEmpty()) {
             return new Vector<>(game.getPlayer(playerNo).getPotentialSettlements());
         }
 
-        Vector<Integer> nodes = new Vector<>();
+        return game.getPlayer(playerNo).getPotentialSettlements().stream()
+            .filter(node -> game.getBoard().getAdjacentHexesToNode(node).stream()
+                .anyMatch(hex -> resources.contains(game.getBoard().getHexTypeFromCoord(hex)))
+            ).collect(Collectors.toList());
 
-        for (int node : game.getPlayer(playerNo).getPotentialSettlements()) {
-
-            Set<Integer> resourceSet = new HashSet<>(resources);
-
-            for (int hex : game.getBoard().getAdjacentHexesToNode(node)) {
-                if (resourceSet.contains(game.getBoard().getHexTypeFromCoord(hex))) {
-                    nodes.add(node);
-                    break;
-                }
-            }
-        }
-
-        return nodes;
     }
 
     /**
@@ -213,26 +206,14 @@ public class NDHelpers {
      */
     public static SOCPossibleSettlement bestPossibleSettlement(SOCGame game, SOCPlayer player, List<Integer> resources) {
         int playerNo = player.getPlayerNumber();
-        
 
-        Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
-        if(possible_nodes.isEmpty()) {
-        	possible_nodes = findPotentialSettlementsFor(game, playerNo, Collections.emptyList());
-        	if(possible_nodes.isEmpty()) {
-        		return null;
-        	}
+        List<Integer> possibleNodes = findPotentialSettlementsFor(game, playerNo, resources);
+        if(possibleNodes.isEmpty()) {
+            possibleNodes = findPotentialSettlementsFor(game, playerNo, Collections.emptyList());
         }
+        Optional<Integer> bestNode = possibleNodes.stream().max(Comparator.comparing(node -> totalProbabilityAtNode(game, node)));
 
-        if (possible_nodes.size() == 0) return null;
-        int bestNode = possible_nodes.firstElement();
-
-        for (int node : possible_nodes) {
-            if (totalProbabilityAtNode(game, bestNode) > totalProbabilityAtNode(game, node)) {
-                bestNode = node;
-            }
-        }
-
-        return new SOCPossibleSettlement(player, bestNode, null); //TODO add potential road list
+        return bestNode.map(integer -> new SOCPossibleSettlement(player, integer, null)).orElse(null); //TODO add potential road list
     }
 
 
@@ -264,58 +245,7 @@ public class NDHelpers {
      * @return best road to build
      */
     public static SOCPossiblePiece bestPossibleLongRoad(SOCGame game, SOCPlayer player) {
-        // TODO refactor
-        //check if the roads of our first settlement can connect to the roads of our second settlement
-        Set<Integer> notOurRoads = game.getBoard().getRoadsAndShips().stream()
-                .filter(road -> !road.getPlayer().equals(player))
-                .map(SOCPlayingPiece::getCoordinates)
-                .collect(Collectors.toSet());
-        Set<Set<Integer>> roadNetworks = getRoadNetworks(game, player);
-        if (roadNetworks.size() == 2) {
-            Iterator<Set<Integer>> iterator = roadNetworks.iterator();
-            Set<Integer> firstBranching = iterator.next().stream()
-                    .flatMap(edge -> game.getBoard().getAdjacentEdgesToEdge(edge).stream())
-                    .filter(edge -> !notOurRoads.contains(edge))
-                    .collect(Collectors.toSet());
-            Set<Integer> secondBranching = iterator.next().stream()
-                    .flatMap(edge -> game.getBoard().getAdjacentEdgesToEdge(edge).stream())
-                    .filter(edge -> !notOurRoads.contains(edge))
-                    .collect(Collectors.toSet());
-            TreeSet<Integer> union = new TreeSet<>(firstBranching);
-            union.retainAll(secondBranching);
-            if(union.size() > 0) {
-                return new SOCPossibleRoad(player, union.first(), null);
-            }
-        }
-
-        // for now the strat is to try to build off of the longest road
-        // of the player
-        player.calcLongestRoad2();
-        Optional<SOCLRPathData> pathData = player.getLRPaths().stream().max(Comparator.comparing(SOCLRPathData::getLength));
-
-        if (pathData.isPresent()) {
-            SOCLRPathData path = pathData.get();
-            // check if can build off beginning
-
-            //TODO findPossibleRoads(game, path.getBeginning()) vs game.getBoard().getAdjacentEdgesToNode(
-            //TODO snake in direction of other settlement and good open areas / nodes
-            List<Integer> possibleFront = game.getBoard().getAdjacentEdgesToNode(path.getBeginning()).stream()
-                    .filter(player::isPotentialRoad)
-                    .collect(Collectors.toList());
-            // for now just return the first possible... later we need to prolly
-            // search this shizz our
-            if (possibleFront.size() != 0) return new SOCPossibleRoad(player, possibleFront.get(0), null);
-
-            // same but end...
-            List<Integer> possibleEnd = game.getBoard().getAdjacentEdgesToNode(path.getEnd()).stream()
-                    .filter(player::isPotentialRoad)
-                    .collect(Collectors.toList());
-            // for now just return the first possible... later we need to prolly
-            // search this shizz our
-            if (possibleEnd.size() != 0) return new SOCPossibleRoad(player, possibleEnd.get(0), null);
-        }
-
-        return null;
+        return bestPossibleLongRoad(game, player, 1).get(0);
     }
 
     /**
@@ -325,77 +255,114 @@ public class NDHelpers {
      * @param player
      * @return Pair of best 2 roads
      */
-    /*public static Pair<SOCPossiblePiece, SOCPossiblePiece> bestTwoPossibleLongRoad(SOCGame game, SOCPlayer player) {
-        SOCPossiblePiece first = null;
-        
+    public static List<SOCPossiblePiece> bestPossibleLongRoad(SOCGame game, SOCPlayer player, int len) {
+        // TODO refactor
+
         //check if the roads of our first settlement can connect to the roads of our second settlement
-        Set<Integer> notOurRoads = game.getBoard().getRoadsAndShips().stream()
-                .filter(road -> !road.getPlayer().equals(player))
+        final SOCBoard board = game.getBoard();
+        Map<Boolean, Set<SOCPlayingPiece>> byOwner = new HashSet<>(board.getRoadsAndShips()).stream()
+                .collect(Collectors.partitioningBy(road -> road.getPlayer().equals(player), Collectors.toSet()));
+        Set<Integer> allRoads = board.getRoadsAndShips().stream()
                 .map(SOCPlayingPiece::getCoordinates)
                 .collect(Collectors.toSet());
-        Set<Set<Integer>> roadNetworks = getRoadNetworks(game, player);
-        if (roadNetworks.size() == 2) {
-            Iterator<Set<Integer>> iterator = roadNetworks.iterator();
-            Set<Integer> firstBranching = iterator.next().stream()
-                    .flatMap(edge -> game.getBoard().getAdjacentEdgesToEdge(edge).stream())
-                    .filter(edge -> !notOurRoads.contains(edge))
-                    .collect(Collectors.toSet());
-            Set<Integer> secondBranching = iterator.next().stream()
-                    .flatMap(edge -> game.getBoard().getAdjacentEdgesToEdge(edge).stream())
-                    .filter(edge -> !notOurRoads.contains(edge))
-                    .collect(Collectors.toSet());
-            TreeSet<Integer> union = new TreeSet<>(firstBranching);
-            union.retainAll(secondBranching);
-            if(union.size() > 0) {
-                first = new SOCPossibleRoad(player, union.first(), null);
-            }
-        }
+        Set<Integer> otherSettlements = Stream.concat(board.getSettlements().stream(), board.getCities().stream())
+                .map(SOCPlayingPiece::getCoordinates)
+                .collect(Collectors.toSet());
+        List<Set<Integer>> roadNetworks = getRoadNetworks(game, player);
 
-        // for now the strat is to try to build off of the longest road
-        // of the player
         player.calcLongestRoad2();
-        Optional<SOCLRPathData> pathData = player.getLRPaths().stream().max(Comparator.comparing(SOCLRPathData::getLength));
-
-        if (pathData.isPresent()) {
-            SOCLRPathData path = pathData.get();
-            // check if can build off beginning
-
-            //TODO findPossibleRoads(game, path.getBeginning()) vs game.getBoard().getAdjacentEdgesToNode(
-            //TODO snake in direction of other settlement and good open areas / nodes
-            List<Integer> possibleFront = game.getBoard().getAdjacentEdgesToNode(path.getBeginning()).stream()
-                    .filter(player::isPotentialRoad)
-                    .collect(Collectors.toList());
-            // for now just return the first possible... later we need to prolly
-            // search this shizz our
-            if (possibleFront.size() != 0) {
-                if (first != null) {
-                    return new Pair<SOCPossiblePiece, SOCPossiblePiece>(first, new SOCPossibleRoad(player, possibleFront.get(0), null));
+        Vector<SOCLRPathData> pathData = player.getLRPaths();
+        if (roadNetworks.size() == 2) {
+            Optional<List<Integer>> connection = Optional.of(getBestConnection(
+                    Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
+                    Arrays.asList(pathData.get(1).getBeginning(), pathData.get(1).getEnd()),
+                    board,
+                    allRoads,
+                    otherSettlements
+            )).orElseGet(() -> getBestConnection(
+                    roadNetworks.get(0),
+                    roadNetworks.get(1),
+                    board,
+                    allRoads,
+                    otherSettlements
+            ));
+            if(connection.isPresent()) {
+                //TODO compare nodes start to end vs end to start
+                List<SOCPossiblePiece> connections = new ArrayList<>();
+                Iterator<Integer> iterator = connection.get().iterator();
+                int last = iterator.next();
+                while(iterator.hasNext()){
+                    int current = iterator.next();
+                    int edge = board.getEdgeBetweenAdjacentNodes(last, current);
+                    connections.add(new SOCPossibleRoad(player, edge, null));
+                    last = current;
                 }
-                first = new SOCPossibleRoad(player, possibleFront.get(0), null);
-            }
-
-            // same but end...
-            List<Integer> possibleEnd = game.getBoard().getAdjacentEdgesToNode(path.getEnd()).stream()
-                    .filter(player::isPotentialRoad)
-                    .collect(Collectors.toList());
-            // for now just return the first possible... later we need to prolly
-            // search this shizz our
-            if (possibleEnd.size() != 0) {
-                if (first != null) {
-                    return new Pair<SOCPossiblePiece, SOCPossiblePiece>(first, new SOCPossibleRoad(player, possibleEnd.get(0), null));
-                }
-                first = new SOCPossibleRoad(player, possibleEnd.get(0), null);
+                //TODO not enough in connections
+                return connections;
             }
         }
 
-        return null;
-    }*/
+        return Stream.of(pathData.get(0).getBeginning(), pathData.get(0).getEnd())
+                .flatMap(node -> board.getAdjacentEdgesToNode(node).stream())
+                .filter(edge -> !allRoads.contains(edge))
+                .map(edge -> new SOCPossibleRoad(player, edge, null))
+                .collect(Collectors.toList());
+    }
 
-    private static Set<Set<Integer>> getRoadNetworks(SOCGame game, SOCPlayer player) {
+    public static int MAX_DEPTH = 5;
+    //TODO
+
+    private static Optional<List<Integer>> getBestConnection(Collection<Integer> startNodes, Collection<Integer> endNodes, SOCBoard board, Set<Integer> forbiddenRoads, Set<Integer> forbiddenNodes) {
+        Set<Integer> visitedNodes = new HashSet<>(startNodes);
+        Set<Integer> frontier = new HashSet<>(startNodes);
+        Map<Integer, Integer> parentNode = new HashMap<>();
+        int depth = 0;
+        int endNode = -1;
+        while(frontier.size() > 0 && depth < MAX_DEPTH && endNode == -1) {
+            Set<Integer> newFrontier = new HashSet<>();
+            //TODO sort frontier
+            for(int node : frontier) {
+                if(endNodes.contains(node)) {
+                    endNode = node;
+                    break;
+                }
+                visitedNodes.add(node);
+                for(int childNode : board.getAdjacentNodesToNode(node)) {
+                    if(
+                            forbiddenNodes.contains(childNode)
+                            || forbiddenRoads.contains(board.getEdgeBetweenAdjacentNodes(node, childNode))
+                            || visitedNodes.contains(childNode)
+                    ) {
+                        continue;
+                    }
+                    if(parentNode.get(childNode) == null) {
+                        parentNode.put(childNode, node);
+                        newFrontier.add(childNode);
+                    }
+                }
+            }
+            frontier = newFrontier;
+        }
+        
+        if(endNode == -1) {
+            return Optional.empty();
+        }
+        int currentNode = endNode;
+        List<Integer> backtrack = new ArrayList<>();
+        while(!startNodes.contains(currentNode)) {
+            backtrack.add(currentNode);
+            currentNode = parentNode.get(currentNode);
+        }
+        backtrack.add(currentNode);
+        return Optional.of(backtrack);
+    }
+
+    private static List<Set<Integer>> getRoadNetworks(SOCGame game, SOCPlayer player) {
         return Stream.concat(player.getSettlements().stream(), player.getCities().stream())
                 .map(SOCPlayingPiece::getCoordinates)
                 .map(coord -> getAllRoadsConnected(coord, game, player))
-                .collect(Collectors.toCollection(HashSet::new));
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     private static Set<Integer> getAllRoadsConnected(int nodeCoord, SOCGame game, SOCPlayer player) {
@@ -765,15 +732,18 @@ public class NDHelpers {
                 .map(SOCCity::getAdjacentHexes)
                 .flatMap(Collection::stream);
         //double city hexes since cities give double
-        cityHexes = Stream.concat(cityHexes, cityHexes);
+        cityHexes = cityHexes.flatMap(coord -> Stream.generate(() -> coord).limit(2));
 
         //create a map of resource type to the total probability
-        return Stream.concat(settlementHexes, cityHexes)
+        Map<Integer, Integer> result = Stream.concat(settlementHexes, cityHexes)
                 .collect(Collectors.groupingBy(board::getHexTypeFromCoord, Collectors.summingInt(board::getHexNumFromCoord)));
+        IntStream.range(SOCResourceConstants.MIN, SOCResourceConstants.MAXPLUSONE - 1)
+            .forEach(type -> result.putIfAbsent(type, 0));
+        return result;
     }
     
     public static int getApparentScore(SOCPlayer p) {
-    	return p.getPublicVP();
+    	return p.getPublicVP() + p.getInventory().getNumVPItems();
     }
 
 }

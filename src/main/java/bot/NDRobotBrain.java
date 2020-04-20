@@ -25,6 +25,8 @@ import soc.game.SOCInventoryItem;
 import bot.NDHelpers;
 import soc.robot.SOCPossiblePiece;
 import java.util.Arrays;
+import java.util.List;
+
 import soc.debug.D;
 
 public class NDRobotBrain extends SOCRobotBrain {
@@ -82,7 +84,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     		
     }
 
-    /*private boolean playRoadCard() {
+    private boolean playRoadCard() {
         // i guess if top two are roads lets get it
         if (ourPlayerData.getInventory().hasPlayable(SOCDevCardConstants.ROADS)) {
             /*
@@ -105,20 +107,22 @@ public class NDRobotBrain extends SOCRobotBrain {
                 }
             } else {
                 buildingPlan.push(first);
-            }
-            Pair<SOCPossiblePiece, SOCPossiblePiece> pieces = NDHelpers.bestTwoPossibleLongRoad(game, ourPlayerData);
+            }*/
+           
+            List<SOCPossiblePiece> pieces = NDHelpers.bestPossibleLongRoad(game, ourPlayerData, 2);
+
             waitingForGameState = true;
             counter = 0;
             expectPLACING_FREE_ROAD1 = true;
-            whatWeWantToBuild = new SOCRoad(ourPlayerData, pieces.getKey().getCoordinates(), null);
-            buildingPlan.push(pieces.getValue());
+            whatWeWantToBuild = new SOCRoad(ourPlayerData, pieces.get(0).getCoordinates(), null);
+            buildingPlan.push(pieces.get(1));
             client.playDevCard(game, SOCDevCardConstants.ROADS);
             pause(1500);
             return true;
-
+		
         }
         return false;
-    }*/
+    }
 
     private boolean playKnightCard() {
         if (ourPlayerData.getInventory().hasPlayable(SOCDevCardConstants.KNIGHT)) {
@@ -264,7 +268,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     	
     	negotiator.setTargetPiece(ourPlayerNumber, targetPiece);
     
-        tryToPlayDevCard();
+        //tryToPlayDevCard();
 
     	if (! expectWAITING_FOR_MONOPOLY) {
     		

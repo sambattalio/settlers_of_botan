@@ -166,7 +166,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     /**
      * Attempts to play a development card to increase resources / build what we need
      *
-     */
+     
     public boolean tryToPlayDevCard() {
         if (game.getGameState() == SOCGame.PLAY1 && !ourPlayerData.hasPlayedDevCard()) {
             // first priority.. if there is a robber blocking one of our hexes -> move it
@@ -196,7 +196,7 @@ public class NDRobotBrain extends SOCRobotBrain {
             if (playKnightCard()) return true;
         }
         return false;
-    }
+    }*/
 
     /* UNCOMMENT TO PLAY DEV CARDS OUR WAY BUT ALSO lose some functionality
     protected void buildOrGetResourceByTradeOrCard() throws IllegalStateException {
@@ -204,8 +204,8 @@ public class NDRobotBrain extends SOCRobotBrain {
             // update plan b/c ur boy just played a dev card
         }
         buildRequestPlannedPiece();
-    }
-    */
+   	}
+    
     
     private boolean checkShouldContinue() {
     	for(int i = 0; i < 4; i++) {

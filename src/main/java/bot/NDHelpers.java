@@ -22,6 +22,8 @@ import java.util.function.Predicate;
 import javafx.util.Pair;
 
 
+import javax.swing.text.html.Option;
+
 import static java.lang.Math.abs;
 
 public class NDHelpers {
@@ -270,24 +272,35 @@ public class NDHelpers {
 
         player.calcLongestRoad2();
         Vector<SOCLRPathData> pathData = player.getLRPaths();
-//        if (roadNetworks.size() == 2) {
-//            Optional<Collection<Integer>> connection = getBestConnection(
-//                    Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
-//                    Arrays.asList(pathData.get(1).getBeginning(), pathData.get(1).getEnd()),
-//                    board,
-//                    allRoads,
-//                    otherSettlements
-//            );
-//            if(!connection.isPresent()) {
-//                connection = getBestConnection(
-//                        roadNetworks.get(0),
-//                        roadNetworks.get(1),
-//                        board,
-//                        allRoads,
-//                        otherSettlements
-//                );
-//            }
-//        }
+        if (roadNetworks.size() == 2) {
+            Optional<List<Integer>> connection = Optional.of(getBestConnection(
+                    Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
+                    Arrays.asList(pathData.get(1).getBeginning(), pathData.get(1).getEnd()),
+                    board,
+                    allRoads,
+                    otherSettlements
+            )).orElseGet(() -> getBestConnection(
+                    roadNetworks.get(0),
+                    roadNetworks.get(1),
+                    board,
+                    allRoads,
+                    otherSettlements
+            ));
+            if(connection.isPresent()) {
+                //TODO compare nodes start to end vs end to start
+                List<SOCPossiblePiece> connections = new ArrayList<>();
+                Iterator<Integer> iterator = connection.get().iterator();
+                int last = iterator.next();
+                while(iterator.hasNext()){
+                    int current = iterator.next();
+                    int edge = board.getEdgeBetweenAdjacentNodes(last, current);
+                    connections.add(new SOCPossibleRoad(player, edge, null));
+                    last = current;
+                }
+                //TODO not enough in connections
+                return connections;
+            }
+        }
 
         return Stream.of(pathData.get(0).getBeginning(), pathData.get(0).getEnd())
                 .flatMap(node -> board.getAdjacentEdgesToNode(node).stream())
@@ -299,14 +312,20 @@ public class NDHelpers {
     public static int MAX_DEPTH = 5;
     //TODO
 
-    private static Optional<Collection<Integer>> getBestConnection(Collection<Integer> startNodes, Collection<Integer> endNodes, SOCBoard board, Set<Integer> forbiddenRoads, Set<Integer> forbiddenNodes) {
+    private static Optional<List<Integer>> getBestConnection(Collection<Integer> startNodes, Collection<Integer> endNodes, SOCBoard board, Set<Integer> forbiddenRoads, Set<Integer> forbiddenNodes) {
         Set<Integer> visitedNodes = new HashSet<>(startNodes);
         Set<Integer> frontier = new HashSet<>(startNodes);
         Map<Integer, Integer> parentNode = new HashMap<>();
         int depth = 0;
-        while(frontier.size() > 0 && depth < MAX_DEPTH) {
-            Set<Integer> newFrontier = new HashSet<>(startNodes);
+        int endNode = -1;
+        while(frontier.size() > 0 && depth < MAX_DEPTH && endNode == -1) {
+            Set<Integer> newFrontier = new HashSet<>();
+            //TODO sort frontier
             for(int node : frontier) {
+                if(endNodes.contains(node)) {
+                    endNode = node;
+                    break;
+                }
                 visitedNodes.add(node);
                 for(int childNode : board.getAdjacentNodesToNode(node)) {
                     if(
@@ -324,7 +343,17 @@ public class NDHelpers {
             }
             frontier = newFrontier;
         }
-        return Optional.empty();
+        if(endNode == -1) {
+            return Optional.empty();
+        }
+        int currentNode = endNode;
+        List<Integer> backtrack = new ArrayList<>();
+        while(!startNodes.contains(currentNode)) {
+            backtrack.add(currentNode);
+            currentNode = parentNode.get(currentNode);
+        }
+        backtrack.add(currentNode);
+        return Optional.of(backtrack);
     }
 
     private static List<Set<Integer>> getRoadNetworks(SOCGame game, SOCPlayer player) {

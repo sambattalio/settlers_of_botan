@@ -56,7 +56,7 @@ public class DefaultStrategy {
         }
         
 
-        if (decisionTreeDM.getBrain().getAttempt(SETTLEMENT) &&  NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {	
+        if (decisionTreeDM.getBrain().getAttempt(SETTLEMENT) && NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
         	D.ebugPrintln("----- Settlement -----");
 		    return possibleSettlement.get();
         } else {

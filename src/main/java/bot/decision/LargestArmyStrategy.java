@@ -36,8 +36,7 @@ public class LargestArmyStrategy {
         if (decisionTreeDM.getBrain().getAttempt(CITY) && (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
         	D.ebugPrintln("----- City -----");
         	return possibleCity.get();
-        }
-        else {
+        } else {
         	D.ebugPrintln("No quality city");
         }
         

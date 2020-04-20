@@ -268,80 +268,111 @@ public class NDHelpers {
         Set<Integer> allSettlements = Stream.concat(board.getSettlements().stream(), board.getCities().stream())
                 .map(SOCPlayingPiece::getCoordinates)
                 .collect(Collectors.toSet());
-        List<Set<Integer>> roadNetworks = getRoadNetworks(game, player);
+        Set<Integer> otherSettlements = Stream.concat(board.getSettlements().stream(), board.getCities().stream())
+                .filter(settlement -> settlement.getPlayer() != player)
+                .map(SOCPlayingPiece::getCoordinates)
+                .collect(Collectors.toSet());
+        List<Set<Integer>> connectedNodes = getConnectedNodes(board, player);
 
         player.calcLongestRoad2();
         Vector<SOCLRPathData> pathData = player.getLRPaths();
 
         List<Integer> bestSoFar = new ArrayList<>();
 
-        if (roadNetworks.size() == 2) {
-            Optional<List<Integer>> connection = Optional.of(getBestConnection(
+        if (connectedNodes.size() == 2) {
+            pathData.stream().forEach( path ->
+                    D.ebugPrintln(Integer.toHexString(path.getBeginning()) + "+=+" + Integer.toHexString(path.getEnd()))
+            );
+            Optional<List<Integer>> connection = getBestConnection(
                     Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
                     Arrays.asList(pathData.get(1).getBeginning(), pathData.get(1).getEnd()),
                     board,
                     allRoads,
-                    allSettlements
-            )).orElseGet(() -> getBestConnection(
-                    roadNetworks.get(0),
-                    roadNetworks.get(1),
-                    board,
-                    allRoads,
-                    allSettlements
-            ));
+                    otherSettlements
+            );
+            D.ebugPrintln("Searching connection off of longest " + connection.isPresent());
+
+            if(!connection.isPresent()) {
+                connection = getBestConnection(
+                        connectedNodes.get(0),
+                        connectedNodes.get(1),
+                        board,
+                        allRoads,
+                        otherSettlements
+                );
+                D.ebugPrintln("Searching connection anywhere " + connection.isPresent());
+            }
+
             if(connection.isPresent()) {
                 //TODO compare nodes start to end vs end to start
                 //TODO not enough in connections
                 bestSoFar.addAll(connection.get());
             }
+        } else {
+            D.ebugPrintln("Already connected");
         }
         if(bestSoFar.size() < len) {
 
             List<Integer> destinations = allSettlements.stream()
                     .flatMap(node -> board.getAdjacentNodesToNode(node).stream()
-                            .map(board::getAdjacentEdgesToNode)
+                            .map(board::getAdjacentNodesToNode)
+                            .flatMap(Collection::stream)
+                            .map(board::getAdjacentNodesToNode)
                             .flatMap(Collection::stream)
                     ).filter(node ->
                             !allSettlements.contains(node) &&
                                     board.getAdjacentNodesToNode(node).stream().noneMatch(allSettlements::contains))
                     .collect(Collectors.toList());
 
+
+            //TODO how to get to nearest best - prioritize by 2 away not nearest frontier
             Optional<List<Integer>> pathToNearestPossibleSettlementOffLongest = getBestConnection(
                     Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
                     destinations,
                     board,
                     allRoads,
-                    allSettlements
+                    otherSettlements
             );
 
+            D.ebugPrintln("Searching for nearest " + pathToNearestPossibleSettlementOffLongest.isPresent());
             pathToNearestPossibleSettlementOffLongest.ifPresent(bestSoFar::addAll);
             //TODO add loop?
         }
 
         if(bestSoFar.size() < len) {
+            D.ebugPrintln("Searching extension ");
             bestSoFar.addAll(Stream.of(pathData.get(0).getBeginning(), pathData.get(0).getEnd())
                     .flatMap(node -> board.getAdjacentEdgesToNode(node).stream())
                     .filter(edge -> !allRoads.contains(edge))
                     .collect(Collectors.toList()));
 
         }
+
+        D.ebugPrintln("Done ");
         return bestSoFar.stream()
                 .map(edge -> new SOCPossibleRoad(player, edge, null))
                 .collect(Collectors.toList());
     }
 
-    public static int MAX_DEPTH = 5;
+    public static int MAX_DEPTH = 7;
     //TODO
 
     private static Optional<List<Integer>> getBestConnection(Collection<Integer> startNodes, Collection<Integer> endNodes, SOCBoard board, Set<Integer> forbiddenRoads, Set<Integer> forbiddenNodes) {
         Set<Integer> visitedNodes = new HashSet<>(startNodes);
-        Set<Integer> frontier = new HashSet<>(startNodes);
+        TreeSet<Integer> frontier = new TreeSet<>(startNodes);
         Map<Integer, Integer> parentNode = new HashMap<>();
         int depth = 0;
         int endNode = -1;
+        D.ebugPrintln("Starting " + startNodes.stream().map(Integer::toHexString).collect(Collectors.joining(", ")));
+        D.ebugPrintln("Ending " + endNodes.stream().map(Integer::toHexString).collect(Collectors.joining(", ")));
         while(frontier.size() > 0 && depth < MAX_DEPTH && endNode == -1) {
-            Set<Integer> newFrontier = new HashSet<>();
-            //TODO sort frontier
+            D.ebugPrintln("Depth " + depth + ": " + frontier.stream().map(Integer::toHexString).collect(Collectors.joining(", ")));
+            depth++;
+            TreeSet<Integer> newFrontier = new TreeSet<>(Comparator.comparing(node -> board.getAdjacentHexesToNode(node).stream()
+                .mapToInt(board::getHexNumFromCoord)
+                .sum()
+            ));
+            //TODO sort frontier better - monotonic?
             for(int node : frontier) {
                 if(endNodes.contains(node)) {
                     endNode = node;
@@ -352,7 +383,6 @@ public class NDHelpers {
                     if(
                             forbiddenNodes.contains(childNode)
                             || forbiddenRoads.contains(board.getEdgeBetweenAdjacentNodes(node, childNode))
-                            || visitedNodes.contains(childNode)
                     ) {
                         continue;
                     }
@@ -369,25 +399,25 @@ public class NDHelpers {
             return Optional.empty();
         }
         int currentNode = endNode;
-        List<Integer> backtrack = new ArrayList<>();
+        LinkedList<Integer> backtrack = new LinkedList<>();
         while(!startNodes.contains(currentNode)) {
-            backtrack.add(board.getEdgeBetweenAdjacentNodes(currentNode, parentNode.get(currentNode)));
+            backtrack.addFirst(board.getEdgeBetweenAdjacentNodes(currentNode, parentNode.get(currentNode)));
             currentNode = parentNode.get(currentNode);
         }
         return Optional.of(backtrack);
     }
 
-    private static List<Set<Integer>> getRoadNetworks(SOCGame game, SOCPlayer player) {
+    private static List<Set<Integer>> getConnectedNodes(SOCBoard board, SOCPlayer player) {
         return Stream.concat(player.getSettlements().stream(), player.getCities().stream())
                 .map(SOCPlayingPiece::getCoordinates)
-                .map(coord -> getAllRoadsConnected(coord, game, player))
+                .map(coord -> getAllNodesConnected(coord, board, player))
                 .distinct()
                 .collect(Collectors.toList());
     }
 
-    private static Set<Integer> getAllRoadsConnected(int nodeCoord, SOCGame game, SOCPlayer player) {
+    private static Set<Integer> getAllNodesConnected(int nodeCoord, SOCBoard board, SOCPlayer player) {
         Set<Integer> connected = new HashSet<>();
-        TreeSet<Integer> frontier = game.getBoard().getAdjacentEdgesToNode(nodeCoord).stream()
+        TreeSet<Integer> frontier = board.getAdjacentEdgesToNode(nodeCoord).stream()
                 .filter(edge -> player.getRoadsAndShips().stream().anyMatch(road -> road.getCoordinates() == edge))
                 .collect(Collectors.toCollection(TreeSet::new));
         while(!frontier.isEmpty()) {
@@ -395,13 +425,16 @@ public class NDHelpers {
             frontier.remove(consideredEdge);
             connected.add(consideredEdge);
             frontier.addAll(
-                    game.getBoard().getAdjacentEdgesToEdge(consideredEdge).stream()
+                    board.getAdjacentEdgesToEdge(consideredEdge).stream()
                             .filter(edge -> player.getRoadsAndShips().stream().anyMatch(road -> road.getCoordinates() == edge))
                             .filter(edge -> !connected.contains(edge) && !frontier.contains(edge))
                             .collect(Collectors.toSet())
             );
         }
-        return connected;
+        return connected.stream()
+                .map(edge -> board.getAdjacentNodesToEdge(edge))
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
     }
 
     /**

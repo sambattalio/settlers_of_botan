@@ -79,10 +79,6 @@ public class LongestRoadStrategy {
         	D.ebugPrintln("No card");
         }
 
-
-    	D.ebugPrintln("Reset Array");
-    	Arrays.fill(decisionTreeDM.getBrain().attemptTrade, true);
-    	decisionTreeDM.getBrain().attemptTrade[3] = false;
         D.ebugPrintln("Reached Null");
 
         return null;

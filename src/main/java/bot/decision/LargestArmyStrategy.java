@@ -81,12 +81,11 @@ public class LargestArmyStrategy {
         	D.ebugPrintln("No Road");
         }
         
-        D.ebugPrintln("Reached end - trade for card");
         if(decisionTreeDM.getBrain().getAttempt(CARD)) {
+        	D.ebugPrintln("Reached end - trade for card");
         	return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
         } else {
-        	D.ebugPrintln("Reset Array");
-        	Arrays.fill(decisionTreeDM.getBrain().attemptTrade, true);
+        	D.ebugPrintln("Return Null");
         	return null;
         }
     }

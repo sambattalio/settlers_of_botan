@@ -75,8 +75,6 @@ public class DefaultStrategy {
             return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
         } 
         
-        D.ebugPrintln("Reset Array");
-    	Arrays.fill(decisionTreeDM.getBrain().attemptTrade, true);
     	D.ebugPrintln("Reached Null");
     	
         return null;

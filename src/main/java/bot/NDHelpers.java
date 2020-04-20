@@ -145,11 +145,15 @@ public class NDHelpers {
     public static SOCPossibleSettlement bestPossibleSettlement(SOCGame game, SOCPlayer player, List<Integer> resources) {
         int playerNo = player.getPlayerNumber();
         
-        Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
+        Vector<Integer> possibleNodes = findPotentialSettlementsFor(game, playerNo, resources);
 
-        int bestNode = possible_nodes.firstElement();
+        if(possibleNodes.isEmpty()) {
+            return null;
+        }
 
-        for (int node : possible_nodes) {
+        int bestNode = possibleNodes.firstElement();
+
+        for (int node : possibleNodes) {
             if (totalProbabilityAtNode(game, bestNode) > totalProbabilityAtNode(game, node)) {
                 bestNode = node;
             }

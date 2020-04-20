@@ -1,5 +1,6 @@
 package bot;
 
+import soc.baseclient.ServerConnectInfo;
 import soc.game.SOCGame;
 import soc.message.SOCMessage;
 import soc.robot.SOCRobotBrain;
@@ -10,8 +11,8 @@ import soc.util.SOCRobotParameters;
 
 public class NDRobotClient extends SOCRobotClient {
 
-    NDRobotClient(final String h, final int p, final String nn, final String pw, final String co) {
-        super(h, p, nn, pw, co);
+    public NDRobotClient(ServerConnectInfo sci, String nn, String pw) throws IllegalArgumentException {
+        super(sci, nn, pw);
     }
 
     public void init() {
@@ -44,7 +45,8 @@ public class NDRobotClient extends SOCRobotClient {
 
         System.out.println(name + (pw.equals("") ? "" : ":" + pw) + "@" + server + ":" + port);
 
-        NDRobotClient b = new NDRobotClient(server, port, name, pw, cookie);
+        ServerConnectInfo serverConnectInfo = new ServerConnectInfo(server, port, cookie);
+        NDRobotClient b = new NDRobotClient(serverConnectInfo, name, pw);
         b.init();
     }
 

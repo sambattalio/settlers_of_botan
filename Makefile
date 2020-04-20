@@ -29,6 +29,9 @@ simulate:
 client:
 	java -cp "$(LIBJARFILE)" $(CLIENTCLASS) localhost 8880
 
+test2:
+	java -cp "$(LIBJARFILE):build/classes/java/main" $(SERVERCLASS) -Djsettlers.allow.debug=Y -Djsettlers.startrobots=4 -Djsettlers.bots.start3p=1,$(BOTCLASS) -Djsettlers.bots.botgames.parallel=1 -Djsettlers.bots.botgames.wait_sec=1 -Djsettlers.bots.botgames.total=10 -Djsettlers.bots.botgames.shutdown=Y -Djsettlers.bots.cookie=$(COOKIE) > server.log 2>&1
+
 test:
 	bash demo.sh
 

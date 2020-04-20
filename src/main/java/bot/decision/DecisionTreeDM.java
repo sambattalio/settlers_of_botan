@@ -65,6 +65,4 @@ public class DecisionTreeDM extends SOCRobotDM {
     public int getPlayerNo() {
         return brain.getOurPlayerData().getPlayerNumber();
     }
-
-
 }

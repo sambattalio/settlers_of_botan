@@ -2,6 +2,7 @@ package bot;
 
 import soc.debug.D;
 import soc.game.*;
+import soc.robot.SOCPossiblePiece;
 import soc.robot.SOCPossibleRoad;
 import soc.robot.SOCPossibleSettlement;
 import soc.robot.SOCRobotBrain;
@@ -152,11 +153,11 @@ public class NDHelpers {
     public static SOCPossibleSettlement bestPossibleSettlement(SOCGame game, SOCPlayer player, List<Integer> resources) {
         int playerNo = player.getPlayerNumber();
         
+
         Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
-        if(possible_nodes.size() == 0) {
+        if(possible_nodes.isEmpty()) {
         	possible_nodes = findPotentialSettlementsFor(game, playerNo, Collections.emptyList());
         }
-        
 
         int bestNode = possible_nodes.firstElement();
 
@@ -440,10 +441,45 @@ public class NDHelpers {
                 set.getAmount(SOCResourceConstants.WHEAT) >= 1 &&
                 set.getAmount(SOCResourceConstants.WOOD) >= 2;
     }
+    
+    public static SOCResourceSet getResourcesFor(int type) {
+        SOCResourceSet set = new SOCResourceSet();
+        switch (type) {
+            case SOCPossiblePiece.ROAD: {
+                set.add(1, SOCResourceConstants.CLAY);
+                set.add(1, SOCResourceConstants.WOOD);
+                return set;
+            }
+            case SOCPossiblePiece.SETTLEMENT: {
+                set.add(1, SOCResourceConstants.CLAY);
+                set.add(1, SOCResourceConstants.WOOD);
+                set.add(1, SOCResourceConstants.SHEEP);
+                set.add(1, SOCResourceConstants.WHEAT);
+                return set;
+            }
+            case SOCPossiblePiece.CITY: {
+                set.add(3, SOCResourceConstants.ORE);
+                set.add(2, SOCResourceConstants.WHEAT);
+                return set;
+            }
+            case SOCPossiblePiece.CARD: {
+                //TODO check if cards are left
+                set.add(1, SOCResourceConstants.ORE);
+                set.add(1, SOCResourceConstants.WHEAT);
+                set.add(1, SOCResourceConstants.SHEEP);
+                return set;
+            }
+        }
+        return set;
+    }
 
-    public static boolean haveResourcesFor(int type, NDRobotBrain brain) {
-        ResourceSet set = brain.getOurPlayerData().getResources();
+    public static boolean haveResourcesFor(int type, SOCRobotBrain brain) {
+        return haveResourcesFor(type, brain, brain.getOurPlayerData().getResources());
+    }
+
+    public static boolean haveResourcesFor(int type, SOCRobotBrain brain, ResourceSet set) {
         D.ebugPrintln("Brain thinks bot has: " + set);
+    
         switch (type) {
             case SOCPossiblePiece.ROAD: {
                 if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT) {
@@ -568,6 +604,32 @@ public class NDHelpers {
                     .collect(Collectors.toCollection(HashSet::new));
         }
         return Optional.empty(); //TODO add quality road search based on resources like with settlements & cities
+    }
+
+
+    public static SOCResourceSet getExtantResources(SOCRobotBrain brain) {
+        return Arrays.stream(brain.getGame().getPlayers())
+                .map(SOCPlayer::getResources)
+                .collect(SOCResourceSet::new, SOCResourceSet::add, SOCResourceSet::add);
+    }
+
+    public static Map<Integer, Integer> getProbabilityForResource(SOCRobotBrain brain) {
+        SOCBoard board = brain.getGame().getBoard();
+        //get all the hexes around a settlement
+        Stream<Integer> settlementHexes = brain.getOurPlayerData().getSettlements().stream()
+                .map(SOCSettlement::getAdjacentHexes)
+                .flatMap(Collection::stream);
+
+        //get all hexes around a city
+        Stream<Integer> cityHexes = brain.getOurPlayerData().getCities().stream()
+                .map(SOCCity::getAdjacentHexes)
+                .flatMap(Collection::stream);
+        //double city hexes since cities give double
+        cityHexes = Stream.concat(cityHexes, cityHexes);
+
+        //create a map of resource type to the total probability
+        return Stream.concat(settlementHexes, cityHexes)
+                .collect(Collectors.groupingBy(board::getHexTypeFromCoord, Collectors.summingInt(board::getHexNumFromCoord)));
     }
 
 }

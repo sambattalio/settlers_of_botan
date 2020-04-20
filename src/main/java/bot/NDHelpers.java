@@ -25,6 +25,8 @@ public class NDHelpers {
 
     static final int MAX_ROAD_DIFF = 3;
     static final int MAX_ARMY_DIFF = 2;
+    static final int ARMY_SWITCH = 2;
+    static final int ROAD_SWITCH = 2;
 
     static final SOCResourceSet ROAD_SET = new SOCResourceSet(1, 0, 0, 0, 1, 0);
     static final SOCResourceSet DEVEL_SET = new SOCResourceSet(0, 1, 1, 1, 0, 0);
@@ -44,7 +46,33 @@ public class NDHelpers {
 
         /* Check diff in length */
         SOCPlayer ndBot = game.getPlayer(playerNo);
+        
         return abs(ndBot.getLongestRoadLength() - bestPlayer.getLongestRoadLength()) <= MAX_ROAD_DIFF;
+    }
+    
+    /* Returns true if we have longest road and are ahead of everyone else by 2 */
+    public static boolean canSwitchFromLongestRoad(SOCGame game, int playerNo) {
+        SOCPlayer bestPlayer = game.getPlayerWithLongestRoad();
+        if(bestPlayer == null) {
+        	return false;
+        }
+
+        if (bestPlayer.getPlayerNumber() == playerNo) {
+        	int secondBest = -1;
+    		SOCPlayer secondBestPlayer = null;
+    		
+        	for (int i = 0; i < game.maxPlayers; i++) {
+        		SOCPlayer p = game.getPlayer(i);
+        		if(p != bestPlayer && p.getLongestRoadLength() > secondBest) {
+    				secondBest = p.getLongestRoadLength();
+    				secondBestPlayer = p;
+    			}
+        	}
+    		
+        	return (bestPlayer.getRoadsAndShips().size() >= 15) || ((bestPlayer.getLongestRoadLength() >= 5) && ((bestPlayer.getLongestRoadLength() - secondBestPlayer.getLongestRoadLength()) >= ROAD_SWITCH));
+        } 
+        
+        return false;
     }
 
     /**
@@ -62,6 +90,37 @@ public class NDHelpers {
         SOCPlayer ndBot = game.getPlayer(playerNo);
 
         return game.getNumDevCards() != 0 && abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= MAX_ARMY_DIFF;
+    }
+    
+    /**
+     * Returns if playerNo is ahead in largest army.
+     *
+     * @param game
+     * @param playerNo
+     * @return true if army count - best army count < MAX_ARMY_DIFF
+     */
+    public static boolean canSwitchFromLargestArmy(SOCGame game, int playerNo) {
+        SOCPlayer bestPlayer = game.getPlayerWithLargestArmy();
+        if(bestPlayer == null) {
+        	return false;
+        }
+ 
+        if (bestPlayer.getPlayerNumber() == playerNo) {
+        	int secondBest = -1;
+    		SOCPlayer secondBestPlayer = null;
+    		
+        	for (int i = 0; i < game.maxPlayers; i++) {
+        		SOCPlayer p = game.getPlayer(i);
+        		if(p != bestPlayer && p.getNumKnights() > secondBest) {
+    				secondBest = p.getNumKnights();
+    				secondBestPlayer = p;
+    			}
+        	}
+    		
+    		return (game.getNumDevCards() == 0) || ((bestPlayer.getNumKnights() > 3) && (bestPlayer.getNumKnights() - secondBestPlayer.getNumKnights() >= ARMY_SWITCH));
+        }
+        
+        return false;
     }
 
     /**
@@ -157,6 +216,9 @@ public class NDHelpers {
         Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
         if(possible_nodes.isEmpty()) {
         	possible_nodes = findPotentialSettlementsFor(game, playerNo, Collections.emptyList());
+        	if(possible_nodes.isEmpty()) {
+        		return null;
+        	}
         }
 
         int bestNode = possible_nodes.firstElement();
@@ -382,6 +444,8 @@ public class NDHelpers {
         // here we know we are competitive... now lets see if we can reach
         //TODO try to build off getLRPaths()????
     }
+    
+    
 
     public static boolean canBuildRoadTwo(SOCGame game, final int edgeCoord, final int sourceEdge) {
         for (SOCRoutePiece r : game.getBoard().getRoadsAndShips()) {

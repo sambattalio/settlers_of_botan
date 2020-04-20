@@ -9,6 +9,7 @@ import soc.robot.SOCPossibleCity;
 import soc.robot.SOCPossiblePiece;
 import soc.robot.SOCPossibleSettlement;
 import soc.robot.SOCPossibleRoad;
+import soc.robot.SOCRobotDM;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -32,6 +33,7 @@ public class DefaultStrategy {
     }
 
     public static SOCPossiblePiece plan(DecisionTreeDM decisionTreeDM) {
+    	D.ebugPrintln("----- Start Default Plan-----");
         Optional<SOCPossibleSettlement> possibleSettlement;
         Optional<SOCPossibleCity> possibleCity;
         Optional<SOCPossiblePiece> possibleRoad;
@@ -45,9 +47,21 @@ public class DefaultStrategy {
 			}
         }
         
+        if ((possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+        	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain())) {
+        	    D.ebugPrintln("----- City -----");
+        	    return possibleCity.get();
+        	} else {
+        		D.ebugPrintln("Trade for City");
+        		return possibleCity.get();
+        	}
+        }
+        else {
+        	D.ebugPrintln("No quality city");
+        }
+        
 
         if (NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	D.ebugPrintln("Maybe Settlement");
         	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- Settlement -----");
 		    	return possibleSettlement.get();
@@ -69,20 +83,6 @@ public class DefaultStrategy {
 	        }
         } else {
         	D.ebugPrintln("No Road");
-        }
-
-        if ((possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	D.ebugPrintln("Maybe City");
-        	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain())) {
-        	    D.ebugPrintln("----- City -----");
-        	    return possibleCity.get();
-        	} else {
-        		D.ebugPrintln("Trade for City");
-        		return possibleCity.get();
-        	}
-        }
-        else {
-        	D.ebugPrintln("No quality city");
         }
         
         if (NDHelpers.haveResourcesFor(CARD, decisionTreeDM.getBrain()) && NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5) {

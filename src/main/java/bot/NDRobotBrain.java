@@ -243,8 +243,10 @@ public class NDRobotBrain extends SOCRobotBrain {
     	SOCResourceSet targetResources = targetPiece.getResourcesToBuild();
     	
     	negotiator.setTargetPiece(ourPlayerNumber, targetPiece);
+    	
+    	D.ebugPrintln("Failed attempts: " + failedBuildingAttempts);
     
-        tryToPlayDevCard();
+        //tryToPlayDevCard();
 
     	if (! expectWAITING_FOR_MONOPOLY) {
     		
@@ -302,5 +304,22 @@ public class NDRobotBrain extends SOCRobotBrain {
 
     	}
     	D.ebugPrintln("End of Function");
+    }
+    
+    @Override
+    protected void resetFieldsAtEndTurn() {
+    	waitingForGameState = true;
+        counter = 0;
+        expectROLL_OR_CARD = true;
+        waitingForOurTurn = true;
+
+        doneTrading = (robotParameters.getTradeFlag() != 1);
+
+        D.ebugPrintln("!!! ENDING TURN !!!");
+        negotiator.resetIsSelling();
+        negotiator.resetOffersMade();
+        buildingPlan.clear();
+        negotiator.resetTargetPieces();
+        Arrays.fill(attemptTrade, true);
     }
 }

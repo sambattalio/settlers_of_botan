@@ -48,7 +48,8 @@ public class LongestRoadStrategy {
 			}
         }
 
-        if (decisionTreeDM.getBrain().getAttempt(SETTLEMENT) && NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+        //decisionTreeDM.getBrain().getAttempt(SETTLEMENT) && 
+        if (NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
         	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- Settlement -----");
 		    	return possibleSettlement.get();
@@ -60,7 +61,8 @@ public class LongestRoadStrategy {
         	D.ebugPrintln("No settlement");
         }	
 
-        if(decisionTreeDM.getBrain().getAttempt(ROAD) && (possibleRoad = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain())).isPresent()) {
+        //decisionTreeDM.getBrain().getAttempt(ROAD) && 
+        if((possibleRoad = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain())).isPresent()) {
 	        if (NDHelpers.haveResourcesFor(ROAD, decisionTreeDM.getBrain())) {
 	            D.ebugPrintln("----- Road -----");
 	            return possibleRoad.get();
@@ -72,8 +74,8 @@ public class LongestRoadStrategy {
         	D.ebugPrintln("No Road");
         }
 
-
-        if (decisionTreeDM.getBrain().getAttempt(CITY) && (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+        //decisionTreeDM.getBrain().getAttempt(CITY) && 
+        if ((possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
         	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- City -----");
         	    return possibleCity.get();

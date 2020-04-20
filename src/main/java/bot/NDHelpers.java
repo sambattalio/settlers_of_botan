@@ -695,5 +695,9 @@ public class NDHelpers {
         return Stream.concat(settlementHexes, cityHexes)
                 .collect(Collectors.groupingBy(board::getHexTypeFromCoord, Collectors.summingInt(board::getHexNumFromCoord)));
     }
+    
+    public static int getApparentScore(SOCPlayer p) {
+    	return p.getPublicVP();
+    }
 
 }

@@ -225,7 +225,7 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 		
 		return null;
 	}
-
+	
 	@Override
 	public SOCTradeOffer makeOffer(SOCPossiblePiece targetPiece) {
 		D.ebugPrintln("----- Make Offer Thinking -----");
@@ -412,8 +412,15 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 				players_to_offer[p.getPlayerNumber()] = false;
 			}
 		}
+		
+		boolean someoneToTradeTo = false;
+		for(SOCPlayer p : game.getPlayers()) {
+			if(players_to_offer[p.getPlayerNumber()]) {
+				someoneToTradeTo = true;
+			}
+		}
 
-		if(giveResourceSet.getTotal() != 0 && getResourceSet.getTotal() != 0) {
+		if(someoneToTradeTo && giveResourceSet.getTotal() != 0 && getResourceSet.getTotal() != 0) {
 			SOCTradeOffer offer = new SOCTradeOffer(game.getName(), playerNo, players_to_offer, giveResourceSet, getResourceSet);
 
 			boolean match = false;

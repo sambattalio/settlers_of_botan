@@ -38,7 +38,7 @@ public class NDRobotBrain extends SOCRobotBrain {
         openingBuildStrategy = new NDOpeningBuildStrategy(game, ourPlayerData);
     }
      
-    private static boolean[] attemptTrade = {true, true, true, true};
+    //private static boolean[] attemptTrade = {true, true, true, true};
     
     public void setWaitingResponse(boolean b) {
     	waitingForTradeResponse = b;
@@ -52,7 +52,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     	tradeResponseTimeoutSec = i;
     }
     
-    public static boolean getAttempt(int t) {
+    /*public static boolean getAttempt(int t) {
     	switch(t) {
 			case SOCPossiblePiece.ROAD: 		return attemptTrade[0];
 			case SOCPossiblePiece.SETTLEMENT: 	return attemptTrade[1];
@@ -83,7 +83,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     	}
     	
     	return false;
-    }
+    }*/
     
     @Override
     protected void buildOrGetResourceByTradeOrCard() throws IllegalStateException {
@@ -116,7 +116,7 @@ public class NDRobotBrain extends SOCRobotBrain {
 	    		buildRequestPlannedPiece();
 	    	} 
 	    	
-	    	if (checkShouldContinue()) {
+	    	/*if (checkShouldContinue()) {
 	    		D.ebugPrintln("Turn Off " + getIdx(targetPiece.getType()));
 	    		attemptTrade[targetPiece.getType()] = false;
 	    		switch(DecisionTreeType.whichUse(game, getOurPlayerData())) {
@@ -133,7 +133,7 @@ public class NDRobotBrain extends SOCRobotBrain {
 	    	} else {
 	    		D.ebugPrintln("End Turn");
 	    		Arrays.fill(attemptTrade, true);
-	    	}
+	    	}*/
     	}
     }
 }

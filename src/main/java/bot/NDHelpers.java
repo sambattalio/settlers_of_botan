@@ -17,6 +17,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.function.Predicate;
+import javafx.util.Pair;
 
 
 import static java.lang.Math.abs;
@@ -313,6 +314,79 @@ public class NDHelpers {
             // for now just return the first possible... later we need to prolly
             // search this shizz our
             if (possibleEnd.size() != 0) return new SOCPossibleRoad(player, possibleEnd.get(0), null);
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns coords of best 2 possible road to place to maximize length
+     *
+     * @param game
+     * @param player
+     * @return Pair of best 2 roads
+     */
+    public static Pair<SOCPossiblePiece, SOCPossiblePiece> bestTwoPossibleLongRoad(SOCGame game, SOCPlayer player) {
+        SOCPossiblePiece first = null;
+        
+        //check if the roads of our first settlement can connect to the roads of our second settlement
+        Set<Integer> notOurRoads = game.getBoard().getRoadsAndShips().stream()
+                .filter(road -> !road.getPlayer().equals(player))
+                .map(SOCPlayingPiece::getCoordinates)
+                .collect(Collectors.toSet());
+        Set<Set<Integer>> roadNetworks = getRoadNetworks(game, player);
+        if (roadNetworks.size() == 2) {
+            Iterator<Set<Integer>> iterator = roadNetworks.iterator();
+            Set<Integer> firstBranching = iterator.next().stream()
+                    .flatMap(edge -> game.getBoard().getAdjacentEdgesToEdge(edge).stream())
+                    .filter(edge -> !notOurRoads.contains(edge))
+                    .collect(Collectors.toSet());
+            Set<Integer> secondBranching = iterator.next().stream()
+                    .flatMap(edge -> game.getBoard().getAdjacentEdgesToEdge(edge).stream())
+                    .filter(edge -> !notOurRoads.contains(edge))
+                    .collect(Collectors.toSet());
+            TreeSet<Integer> union = new TreeSet<>(firstBranching);
+            union.retainAll(secondBranching);
+            if(union.size() > 0) {
+                first = new SOCPossibleRoad(player, union.first(), null);
+            }
+        }
+
+        // for now the strat is to try to build off of the longest road
+        // of the player
+        player.calcLongestRoad2();
+        Optional<SOCLRPathData> pathData = player.getLRPaths().stream().max(Comparator.comparing(SOCLRPathData::getLength));
+
+        if (pathData.isPresent()) {
+            SOCLRPathData path = pathData.get();
+            // check if can build off beginning
+
+            //TODO findPossibleRoads(game, path.getBeginning()) vs game.getBoard().getAdjacentEdgesToNode(
+            //TODO snake in direction of other settlement and good open areas / nodes
+            List<Integer> possibleFront = game.getBoard().getAdjacentEdgesToNode(path.getBeginning()).stream()
+                    .filter(player::isPotentialRoad)
+                    .collect(Collectors.toList());
+            // for now just return the first possible... later we need to prolly
+            // search this shizz our
+            if (possibleFront.size() != 0) {
+                if (first != null) {
+                    return new Pair<SOCPossiblePiece, SOCPossiblePiece>(first, new SOCPossibleRoad(player, possibleFront.get(0), null));
+                }
+                first = new SOCPossibleRoad(player, possibleFront.get(0), null);
+            }
+
+            // same but end...
+            List<Integer> possibleEnd = game.getBoard().getAdjacentEdgesToNode(path.getEnd()).stream()
+                    .filter(player::isPotentialRoad)
+                    .collect(Collectors.toList());
+            // for now just return the first possible... later we need to prolly
+            // search this shizz our
+            if (possibleEnd.size() != 0) {
+                if (first != null) {
+                    return new Pair<SOCPossiblePiece, SOCPossiblePiece>(first, new SOCPossibleRoad(player, possibleEnd.get(0), null));
+                }
+                first = new SOCPossibleRoad(player, possibleEnd.get(0), null);
+            }
         }
 
         return null;

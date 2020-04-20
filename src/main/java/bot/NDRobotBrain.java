@@ -2,11 +2,10 @@ package bot;
 
 import bot.decision.DecisionTreeDM;
 import bot.decision.DecisionTreeType;
-
+import javafx.util.Pair;
 import bot.decision.LongestRoadStrategy;
 import bot.decision.LargestArmyStrategy;
 import bot.decision.DefaultStrategy;
-
 import soc.game.SOCGame;
 import soc.message.SOCMessage;
 import soc.robot.SOCRobotBrain;
@@ -60,8 +59,9 @@ public class NDRobotBrain extends SOCRobotBrain {
     public void setTradeResponseTime(int i) {
     	tradeResponseTimeoutSec = i;
     }
-    
-    /*public static boolean getAttempt(int t) {
+   
+    /* 
+    public static boolean getAttempt(int t) {
     	switch(t) {
 			case SOCPossiblePiece.ROAD: 		return attemptTrade[0];
 			case SOCPossiblePiece.SETTLEMENT: 	return attemptTrade[1];
@@ -70,7 +70,7 @@ public class NDRobotBrain extends SOCRobotBrain {
 		}
     	
     	return false;
-    }
+    }*/
     
     private static int getIdx(int t) {
     	switch(t) {
@@ -87,6 +87,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     private boolean playRoadCard() {
         // i guess if top two are roads lets get it
         if (ourPlayerData.getInventory().hasPlayable(SOCDevCardConstants.ROADS)) {
+            /*
             SOCPossiblePiece first = buildingPlan.pop();
 
             // weird stuff but i guess this is how to get it to work with the run() method
@@ -95,15 +96,28 @@ public class NDRobotBrain extends SOCRobotBrain {
                 if (sec != null && sec instanceof SOCPossibleRoad) {
                     whatWeWantToBuild = new SOCRoad(ourPlayerData, first.getCoordinates(), null);
                     D.ebugPrintln("Playing road card");
+                    waitingForGameState = true;
+                    counter = 0;
+                    expectPLACING_FREE_ROAD1 = true;
                     client.playDevCard(game, SOCDevCardConstants.ROADS);
+                    client.putPiece(game, whatWeWantToBuild);
                     return true;
                 } else {
                     buildingPlan.push(first);
                 }
             } else {
                 buildingPlan.push(first);
-            }
-            
+            }*/
+            Pair<SOCPossiblePiece, SOCPossiblePiece> pieces = NDHelpers.bestTwoPossibleLongRoad(game, ourPlayerData);
+            waitingForGameState = true;
+            counter = 0;
+            expectPLACING_FREE_ROAD1 = true;
+            whatWeWantToBuild = new SOCRoad(ourPlayerData, pieces.getKey().getCoordinates(), null);
+            buildingPlan.push(pieces.getValue());
+            client.playDevCard(game, SOCDevCardConstants.ROADS);
+            pause(1500);
+            return true;
+
         }
         return false;
     }
@@ -111,6 +125,9 @@ public class NDRobotBrain extends SOCRobotBrain {
     private boolean playKnightCard() {
         if (ourPlayerData.getInventory().hasPlayable(SOCDevCardConstants.KNIGHT)) {
             D.ebugPrintln("Playing knight card");
+            expectPLACING_ROBBER = true;
+            waitingForGameState = true;
+            counter = 0;
             client.playDevCard(game, SOCDevCardConstants.KNIGHT);
             pause(1500); // honestly just wait b/c it does in jsettlers /shrug
             return true;
@@ -139,8 +156,13 @@ public class NDRobotBrain extends SOCRobotBrain {
                 // this should only add to 2
                 resourceChoices.add(oreNeededForCity, SOCResourceConstants.ORE);
                 resourceChoices.add(wheatNeededForCity, SOCResourceConstants.WHEAT);
+                expectWAITING_FOR_DISCOVERY = true;
+                waitingForGameState = true;
+                counter = 0;
                 D.ebugPrintln("Playing yr of plenty card -> " + resourceChoices.toString());
                 client.playDevCard(game, SOCDevCardConstants.DISC);
+                client.pickResources(game, resourceChoices);
+                resourceChoices.clear();
                 pause(1500); // honestly just wait b/c it does in jsettlers /shrug
                 return true;
             } else if (oreForSettlement + wheatForSettlement + clayForSettlement + sheepForSettlement == 2) {
@@ -151,8 +173,13 @@ public class NDRobotBrain extends SOCRobotBrain {
                 resourceChoices.add(wheatForSettlement, SOCResourceConstants.WHEAT);
                 resourceChoices.add(clayForSettlement, SOCResourceConstants.CLAY);
                 resourceChoices.add(sheepForSettlement, SOCResourceConstants.SHEEP);
+                expectWAITING_FOR_DISCOVERY = true;
+                waitingForGameState = true;
+                counter = 0;
                 D.ebugPrintln("Playing yr of plenty card -> " + resourceChoices.toString());
                 client.playDevCard(game, SOCDevCardConstants.DISC);
+                client.pickResources(game, resourceChoices);
+                resourceChoices.clear();
                 pause(1500);
                 return true;
             }
@@ -163,6 +190,9 @@ public class NDRobotBrain extends SOCRobotBrain {
     private boolean playMonopolyCard() {
         if (ourPlayerData.getInventory().hasPlayable(SOCDevCardConstants.MONO)) {
             D.ebugPrintln("Playing monopoly card");
+            expectWAITING_FOR_MONOPOLY = true;
+            waitingForGameState = true;
+            counter = 0;
             client.playDevCard(game, SOCDevCardConstants.MONO);
             pause(1500);
             return true;
@@ -172,7 +202,7 @@ public class NDRobotBrain extends SOCRobotBrain {
 
     /**
      * Attempts to play a development card to increase resources / build what we need
-     *
+     */
      
     public boolean tryToPlayDevCard() {
         // debug loop
@@ -186,6 +216,7 @@ public class NDRobotBrain extends SOCRobotBrain {
         }
 
         if (game.getGameState() == SOCGame.PLAY1 && !ourPlayerData.hasPlayedDevCard()) {
+            if (playRoadCard()) return true;
             // first priority.. if there is a robber blocking one of our hexes -> move it
             if (!ourPlayerData.getNumbers().hasNoResourcesForHex(game.getBoard().getRobberHex())) {
                 D.ebugPrintln("Trying to move knight because one is blocking our resources");
@@ -215,17 +246,9 @@ public class NDRobotBrain extends SOCRobotBrain {
             if (NDHelpers.isCompetitiveForLargestArmy(game, ourPlayerData.getPlayerNumber()) && playKnightCard()) return true;
         }
         return false;
-    }*/
+    }
 
-    /* UNCOMMENT TO PLAY DEV CARDS OUR WAY BUT ALSO lose some functionality
-    protected void buildOrGetResourceByTradeOrCard() throws IllegalStateException {
-        if (tryToPlayDevCard()) {
-            // update plan b/c ur boy just played a dev card
-        }
-        buildRequestPlannedPiece();
-   	}
-    
-    
+    /* 
     private boolean checkShouldContinue() {
     	for(int i = 0; i < 4; i++) {
     		if(attemptTrade[i] == true) {

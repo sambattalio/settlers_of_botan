@@ -240,6 +240,7 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 		brain.setWaitingResponse(true);
 
 		if(needed.getTotal() > 2) {
+			D.ebugPrintln("More than 2 resources needed - can't trade");
 			return null;
 		}
 

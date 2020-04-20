@@ -35,6 +35,7 @@ public class LongestRoadStrategy {
     	D.ebugPrintln("----- Start Longest Road Plan-----");
         Optional<SOCPossibleSettlement> possibleSettlement;
         Optional<SOCPossibleCity> possibleCity;
+        Optional<SOCPossiblePiece> possibleRoad;
 
         //TODO Check if road is threatened before performing other actions
         if (NDHelpers.haveResourcesForRoadAndSettlement(decisionTreeDM.getBrain())) {
@@ -53,18 +54,21 @@ public class LongestRoadStrategy {
 		    	return possibleSettlement.get();
         	} else {
         		D.ebugPrintln("Trade for Settlement");
-        		decisionTreeDM.getBrain().setAttemptTrade(true);
         		return possibleSettlement.get();
         	}
         } else {
         	D.ebugPrintln("No settlement");
         }	
 
-        if (NDHelpers.haveResourcesFor(ROAD, decisionTreeDM.getBrain())) {
-            D.ebugPrintln("----- Road -----");
-            return NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain()).orElse(null);
+        if((possibleRoad = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain())).isPresent()) {
+	        if (NDHelpers.haveResourcesFor(ROAD, decisionTreeDM.getBrain())) {
+	            D.ebugPrintln("----- Road -----");
+	            return possibleRoad.get();
+	        } else {
+	        	D.ebugPrintln("Trade for Road");
+        		return possibleRoad.get();
+	        }
         } else {
-        	
         	D.ebugPrintln("No Road");
         }
 
@@ -76,7 +80,6 @@ public class LongestRoadStrategy {
         	    return possibleCity.get();
         	} else {
         		D.ebugPrintln("Trade for City");
-        		decisionTreeDM.getBrain().setAttemptTrade(true);
         		return possibleCity.get();
         	}
         }

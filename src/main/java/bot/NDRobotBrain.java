@@ -1,6 +1,7 @@
 package bot;
 
 import bot.decision.DecisionTreeDM;
+import bot.decision.DecisionTreeType;
 
 import soc.game.SOCGame;
 import soc.message.SOCMessage;
@@ -59,12 +60,12 @@ public class NDRobotBrain extends SOCRobotBrain {
     	
     	if (! expectWAITING_FOR_MONOPOLY) {
     		
-    		if (attemptTrade && (!ourPlayerData.getResources().contains(targetResources))) {
+    		if ((!ourPlayerData.getResources().contains(targetResources))) {
     			 waitingForTradeResponse = false;
     			 attemptTrade = false;
     			
     			 makeOffer(targetPiece);
-    			 
+    			 pause(1000);
     		}
     		
     		if (! waitingForTradeResponse) {

@@ -1,5 +1,7 @@
 package bot;
 
+import soc.debug.D;
+
 import soc.game.SOCGame;
 import soc.game.SOCPlayer;
 import soc.robot.MonopolyStrategy;
@@ -39,7 +41,7 @@ public class NDMonopolyStrategy extends MonopolyStrategy {
                 mostRes = i;
             }
         }
-
+        D.ebugPrintln("Picking resource enum value " + String.valueOf(bestRes) + " for monopoly");
         return bestRes;
     }
 }

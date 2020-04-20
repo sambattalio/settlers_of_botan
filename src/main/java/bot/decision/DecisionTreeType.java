@@ -10,7 +10,7 @@ public enum DecisionTreeType {
     LARGEST_ARMY(),
     DEFAULT();
 
-    static DecisionTreeType whichUse(SOCGame game, SOCPlayer playerData) {
+    public static DecisionTreeType whichUse(SOCGame game, SOCPlayer playerData) {
         try {
             if (LongestRoadStrategy.shouldUse(game, playerData)) {
                 return LONGEST_ROAD;

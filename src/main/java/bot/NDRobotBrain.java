@@ -44,7 +44,7 @@ public class NDRobotBrain extends SOCRobotBrain {
         openingBuildStrategy = new NDOpeningBuildStrategy(game, ourPlayerData);
     }
      
-    //private static boolean[] attemptTrade = {true, true, true, true};
+    public static boolean[] attemptTrade = {true, true, true, false};
     
     public void setWaitingResponse(boolean b) {
     	waitingForTradeResponse = b;
@@ -58,7 +58,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     	tradeResponseTimeoutSec = i;
     }
     
-    /*public static boolean getAttempt(int t) {
+    public static boolean getAttempt(int t) {
     	switch(t) {
 			case SOCPossiblePiece.ROAD: 		return attemptTrade[0];
 			case SOCPossiblePiece.SETTLEMENT: 	return attemptTrade[1];
@@ -81,7 +81,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     		
     }
 
-    private boolean playRoadCard() {
+    /*private boolean playRoadCard() {
         // i guess if top two are roads lets get it
         if (ourPlayerData.getInventory().hasPlayable(SOCDevCardConstants.ROADS)) {
             SOCPossiblePiece first = buildingPlan.pop();
@@ -204,7 +204,7 @@ public class NDRobotBrain extends SOCRobotBrain {
             // update plan b/c ur boy just played a dev card
         }
         buildRequestPlannedPiece();
-   	}
+   	}*/
     
     
     private boolean checkShouldContinue() {
@@ -215,7 +215,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     	}
     	
     	return false;
-    }*/
+    }
     
     @Override
     protected void buildOrGetResourceByTradeOrCard() throws IllegalStateException {
@@ -243,29 +243,43 @@ public class NDRobotBrain extends SOCRobotBrain {
                 }
     		}
     		
-	    	if ((! (waitingForTradeMsg || waitingForTradeResponse)) && ourPlayerData.getResources().contains(targetResources)) {
+    		D.ebugPrintln("Target Piece: " + getIdx(targetPiece.getType()));
+    		D.ebugPrintln("Whole Statement: " + ((! (waitingForTradeMsg || waitingForTradeResponse)) && ourPlayerData.getResources().contains(targetResources)) );
+	    	D.ebugPrintln("Not waiting for Trade Msg or response: " + (! (waitingForTradeMsg || waitingForTradeResponse)));
+	    	D.ebugPrintln("Our Resources: " + ourPlayerData.getResources());
+	    	D.ebugPrintln("Target Resources: " + targetResources);
+    		
+	    	boolean built = false;
+    		if ((! (waitingForTradeMsg || waitingForTradeResponse)) && ourPlayerData.getResources().contains(targetResources)) {
 	    		D.ebugPrintln("Build Piece");
+	    		built = true;
 	    		buildRequestPlannedPiece();
 	    	} 
 	    	
-	    	/*if (checkShouldContinue()) {
-	    		D.ebugPrintln("Turn Off " + getIdx(targetPiece.getType()));
-	    		attemptTrade[targetPiece.getType()] = false;
+	    	if (checkShouldContinue()) {
+	    		if (!built && (! (waitingForTradeMsg || waitingForTradeResponse))) {
+	    			D.ebugPrintln("Turn Off " + getIdx(targetPiece.getType()));
+	    			attemptTrade[getIdx(targetPiece.getType())] = false;
+	    		}
+	    		
+	    		built = false;
 	    		switch(DecisionTreeType.whichUse(game, getOurPlayerData())) {
 	                case LONGEST_ROAD:
-	                	
-	                    break;
+	                	D.ebugPrintln("Rerun Longest Road Plan");
+	                	decisionMaker.planStuff(-1);
+	                    return;
 	                case LARGEST_ARMY:
-	                	LargestArmyStrategy.plan(decisionMaker);
-	                    break;
+	                	D.ebugPrintln("Rerun Largest Army Plan");
+	                	decisionMaker.planStuff(-1);
+	                    return;
 	                case DEFAULT:
-	                	DefaultStrategy.plan(decisionMaker);
-	                    break;
+	                	D.ebugPrintln("Rerun DefaultPlan");
+	                	decisionMaker.planStuff(-1);
+	                    return;
 	            }
-	    	} else {
-	    		D.ebugPrintln("End Turn");
-	    		Arrays.fill(attemptTrade, true);
-	    	}*/
+	    	} 
+
     	}
+    	D.ebugPrintln("End of Function");
     }
 }

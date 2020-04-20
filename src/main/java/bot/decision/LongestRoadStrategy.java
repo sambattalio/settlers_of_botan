@@ -48,41 +48,25 @@ public class LongestRoadStrategy {
 			}
         }
 
-        //decisionTreeDM.getBrain().getAttempt(SETTLEMENT) && 
-        if (NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain())) {
-        	    D.ebugPrintln("----- Settlement -----");
-		    	return possibleSettlement.get();
-        	} else {
-        		D.ebugPrintln("Trade for Settlement");
-        		return possibleSettlement.get();
-        	}
+        if (decisionTreeDM.getBrain().getAttempt(SETTLEMENT) && NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+        	D.ebugPrintln("----- Settlement -----");
+		   	return possibleSettlement.get();
         } else {
         	D.ebugPrintln("No settlement");
         }	
 
         //decisionTreeDM.getBrain().getAttempt(ROAD) && 
-        if((possibleRoad = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain())).isPresent()) {
-	        if (NDHelpers.haveResourcesFor(ROAD, decisionTreeDM.getBrain())) {
-	            D.ebugPrintln("----- Road -----");
-	            return possibleRoad.get();
-	        } else {
-	        	D.ebugPrintln("Trade for Road");
-        		return possibleRoad.get();
-	        }
+        if(decisionTreeDM.getBrain().getAttempt(ROAD) &&  (possibleRoad = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain())).isPresent()) {
+        	D.ebugPrintln("----- Road -----");
+	        return possibleRoad.get();
         } else {
         	D.ebugPrintln("No Road");
         }
 
         //decisionTreeDM.getBrain().getAttempt(CITY) && 
-        if ((possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain())) {
-        	    D.ebugPrintln("----- City -----");
-        	    return possibleCity.get();
-        	} else {
-        		D.ebugPrintln("Trade for City");
-        		return possibleCity.get();
-        	}
+        if (decisionTreeDM.getBrain().getAttempt(CITY) &&  (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+        	D.ebugPrintln("----- City -----");
+        	return possibleCity.get();
         }
         else {
         	D.ebugPrintln("No quality city");
@@ -95,6 +79,10 @@ public class LongestRoadStrategy {
         	D.ebugPrintln("No card");
         }
 
+
+    	D.ebugPrintln("Reset Array");
+    	Arrays.fill(decisionTreeDM.getBrain().attemptTrade, true);
+    	decisionTreeDM.getBrain().attemptTrade[3] = false;
         D.ebugPrintln("Reached Null");
 
         return null;

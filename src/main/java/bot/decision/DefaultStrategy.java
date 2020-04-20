@@ -47,51 +47,39 @@ public class DefaultStrategy {
 			}
         }
         
-        if ((possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain())) {
-        	    D.ebugPrintln("----- City -----");
-        	    return possibleCity.get();
-        	} else {
-        		D.ebugPrintln("Trade for City");
-        		return possibleCity.get();
-        	}
+        if (decisionTreeDM.getBrain().getAttempt(CITY) && (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+        	D.ebugPrintln("----- City -----");
+        	return possibleCity.get();
         }
         else {
         	D.ebugPrintln("No quality city");
         }
         
 
-        if (NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain())) {
-        	    D.ebugPrintln("----- Settlement -----");
-		    	return possibleSettlement.get();
-        	} else {
-        		D.ebugPrintln("Trade for Settlement");
-        		return possibleSettlement.get();
-        	}
+        if (decisionTreeDM.getBrain().getAttempt(SETTLEMENT) &&  NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {	
+        	D.ebugPrintln("----- Settlement -----");
+		    return possibleSettlement.get();
         } else {
         	D.ebugPrintln("No settlement");
         }
         
-        if((possibleRoad = NDHelpers.findQualityRoadForExpansion(decisionTreeDM.getBrain())).isPresent()) {
-	        if (NDHelpers.haveResourcesFor(ROAD, decisionTreeDM.getBrain())) {
-	            D.ebugPrintln("----- Road -----");
-	            return possibleRoad.get();
-	        } else {
-	        	D.ebugPrintln("Trade for Road");
-        		return possibleRoad.get();
-	        }
+        if(decisionTreeDM.getBrain().getAttempt(CITY) && (possibleRoad = NDHelpers.findQualityRoadForExpansion(decisionTreeDM.getBrain())).isPresent()) {
+        	D.ebugPrintln("----- Road -----");
+	        return possibleRoad.get();
         } else {
         	D.ebugPrintln("No Road");
         }
         
-        if (NDHelpers.haveResourcesFor(CARD, decisionTreeDM.getBrain()) && NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5) {
+        if (decisionTreeDM.getBrain().getAttempt(CARD) && NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5) {
         	D.ebugPrintln("----- Card -----");
             return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
-        } else {
-        	D.ebugPrintln("Trade for card");
-        	return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
-        }
+        } 
+        
+        D.ebugPrintln("Reset Array");
+    	Arrays.fill(decisionTreeDM.getBrain().attemptTrade, true);
+    	D.ebugPrintln("Reached Null");
+    	
+        return null;
         
     }
 }

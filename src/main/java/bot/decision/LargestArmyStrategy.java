@@ -33,20 +33,15 @@ public class LargestArmyStrategy {
         Optional<SOCPossibleCity> possibleCity;
         Optional<SOCPossiblePiece> possibleRoad;
 
-        if ((possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain())) {
-        	    D.ebugPrintln("----- City -----");
-        	    return possibleCity.get();
-        	} else {
-        		D.ebugPrintln("Trade for City");
-        		return possibleCity.get();
-        	}
+        if (decisionTreeDM.getBrain().getAttempt(CITY) && (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+        	D.ebugPrintln("----- City -----");
+        	return possibleCity.get();
         }
         else {
         	D.ebugPrintln("No quality city");
         }
         
-        if (NDHelpers.haveResourcesFor(CARD, decisionTreeDM.getBrain()) && NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5) {
+        if ((NDHelpers.haveResourcesFor(CARD, decisionTreeDM.getBrain())) && NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5) {
         	D.ebugPrintln("----- Card -----");
             return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
         } else {
@@ -66,7 +61,7 @@ public class LargestArmyStrategy {
         	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- Settlement -----");
 		    	return possibleSettlement.get();
-        	} else if(NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5){
+        	} else if( decisionTreeDM.getBrain().getAttempt(SETTLEMENT) &&  NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5){
         		D.ebugPrintln("Trade for Settlement");
         		return possibleSettlement.get();
         	}
@@ -78,7 +73,7 @@ public class LargestArmyStrategy {
 	        if (NDHelpers.haveResourcesFor(ROAD, decisionTreeDM.getBrain())) {
 	            D.ebugPrintln("----- Road -----");
 	            return possibleRoad.get();
-	        } else if(NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5){
+	        } else if(decisionTreeDM.getBrain().getAttempt(ROAD) &&  NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5){
 	        	D.ebugPrintln("Trade for Road");
         		return possibleRoad.get();
 	        }
@@ -87,6 +82,12 @@ public class LargestArmyStrategy {
         }
         
         D.ebugPrintln("Reached end - trade for card");
-        return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
+        if(decisionTreeDM.getBrain().getAttempt(CARD)) {
+        	return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
+        } else {
+        	D.ebugPrintln("Reset Array");
+        	Arrays.fill(decisionTreeDM.getBrain().attemptTrade, true);
+        	return null;
+        }
     }
 }

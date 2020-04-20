@@ -60,3 +60,27 @@ Default Expansion Strategy
 # Trading
 
 The trading strategy initially determines what resources the bot needs in order to build the piece it has designated as its next desired piece through the decision tree. It attempts to trade with any ports the bot currently has settlements on in order to obtain this needed piece. The bot will perform port trades until they are determined to no longer helpful. Once this is complete, the bot attempts to perform trades with other players. As it is rarely beneficial to the bot to trade more than one resource for one resource with other players, it will continuously attempt to perform one for one trades with players until it determines offering to players is no longer beneficial. If the bot still doesn’t have the desired resources for the piece, it will try a four for one resource trade with the bank. If all these actions are completed and the resources still aren’t available, the bot will move on to the next piece it desires and start the process over.
+
+# Features one can extend/implement
+
+If you want to contribute / fork this project and make your own bot, look no further!
+The best place to start is to modify / extend the decision tree in the decision directory.
+This leverages a lot of helper functions, and can easily be modified with new logic to change
+the build / trade flow. The simplest way to change the flow of logic in this bot is to change
+the shouldUse functions as well as the respective plan functions for each strategy. When you get
+the hand of the decision tree, you can even implement your own additional strategy sub-tree!
+
+One feature that should be trivial to gameplay to add is trash talking. Leveraging the api at
+[here](http://nand.net/jsettlers/devel/doc/overview-summary.html), you can send messsages in the
+chat to taunt the user! This can be sprinkled anywhere that you see fit, as long as it frustrates
+the opponent.
+
+# Magic numbers / configuration to alter bot's behavior
+
+To keep the current decision tree structure, there are a few key magic numbers you can change
+that will modify how the bot flows.
+
+Here: https://github.com/sambattalio/settlers_of_botan/blob/64719db67084364caf1090942f91e2db3b17fbe3/src/main/java/bot/NDHelpers.java#L31
+
+There are two magic numbers MAX_ROAD_DIFF and MAX_ARMY_DIFF which determine how far ahead or behind you should be
+to continue with this strategy. They are very good in tweaking how aggresive the bot should play.

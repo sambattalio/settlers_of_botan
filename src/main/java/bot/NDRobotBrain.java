@@ -141,28 +141,36 @@ public class NDRobotBrain extends SOCRobotBrain {
      * Attempts to play a development card to increase resources / build what we need
      *
      */
-    public void tryToPlayDevCard() {
+    public boolean tryToPlayDevCard() {
         if (game.getGameState() == SOCGame.PLAY1 && !ourPlayerData.hasPlayedDevCard()) {
             // first priority.. if there is a robber blocking one of our hexes -> move it
             if (!ourPlayerData.getNumbers().hasNoResourcesForHex(game.getBoard().getRobberHex())) {
-                if (playKnightCard()) return;
+                if (playKnightCard()) return true;
             }
             // second thing we should do is check if strategy based decision can be made
             switch(DecisionTreeType.whichUse(game, ourPlayerData)) {
                 case LONGEST_ROAD:
-                    if (playRoadCard()) return;
+                    if (playRoadCard()) return true;
                     break;
                 case LARGEST_ARMY:
-                    if (playKnightCard()) return;
+                    if (playKnightCard()) return true;
                     break;
                 case DEFAULT:
                     break;
             }
 
             // Look to see if any other are valuable to play right now...        
-            if (playYearOfPlentyCard()) return;
-            if (playMonopolyCard()) return;
+            if (playYearOfPlentyCard()) return true;
+            if (playMonopolyCard()) return true;
         }
+        return false;
+    }
+
+    protected void buildOrGetResourceByTradeOrCard() throws IllegalStateException {
+        if (tryToPlayDevCard()) {
+            // update plan b/c ur boy just played a dev card
+        }
+
     }
     
     public boolean trade(SOCPossiblePiece p) {

@@ -2,12 +2,22 @@ package bot;
 
 import soc.debug.D;
 import soc.game.*;
+import soc.robot.SOCPossiblePiece;
 import soc.robot.SOCPossibleRoad;
 import soc.robot.SOCPossibleSettlement;
+import soc.robot.SOCRobotBrain;
+
+import soc.robot.SOCPossibleCard;
+import soc.robot.SOCPossibleCity;
+import soc.robot.SOCPossiblePiece;
+import soc.robot.SOCPossibleSettlement;
+import soc.robot.SOCPossibleRoad;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.function.Predicate;
+
 
 import static java.lang.Math.abs;
 
@@ -61,8 +71,8 @@ public class NDHelpers {
      * @param playerNo
      * @return true if possible to build a settlement
      */
-    public static boolean canBuildSettlement(SOCGame game, int playerNo) {
-        return game.getPlayer(playerNo).getPotentialSettlements().size() != 0;
+    public static boolean canBuildSettlement(int playerNo, NDRobotBrain brain) {
+        return brain.getGame().getPlayer(playerNo).getSettlements().size() < 5;
     }
 
 
@@ -143,7 +153,11 @@ public class NDHelpers {
     public static SOCPossibleSettlement bestPossibleSettlement(SOCGame game, SOCPlayer player, List<Integer> resources) {
         int playerNo = player.getPlayerNumber();
         
+
         Vector<Integer> possible_nodes = findPotentialSettlementsFor(game, playerNo, resources);
+        if(possible_nodes.isEmpty()) {
+        	possible_nodes = findPotentialSettlementsFor(game, playerNo, Collections.emptyList());
+        }
 
         int bestNode = possible_nodes.firstElement();
 
@@ -184,7 +198,7 @@ public class NDHelpers {
      * @param player
      * @return best road to build
      */
-    public static SOCPossibleRoad bestPossibleLongRoad(SOCGame game, SOCPlayer player) {
+    public static SOCPossiblePiece bestPossibleLongRoad(SOCGame game, SOCPlayer player) {
         // TODO refactor
         //check if the roads of our first settlement can connect to the roads of our second settlement
         Set<Integer> notOurRoads = game.getBoard().getRoadsAndShips().stream()
@@ -410,4 +424,212 @@ public class NDHelpers {
         }
         return totalProbabilityAtNodeCache.get(nodeCoord);
     }
+    
+    public static ResourceSet getPlayerResources(NDRobotBrain brain) {
+        return brain.getOurPlayerData().getResources();
+    }
+
+    public static boolean haveResourcesForRoadAndSettlement(NDRobotBrain brain) {
+        if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT ||
+        		brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCSettlement).count() == SOCPlayer.SETTLEMENT_COUNT
+        ) {
+            return false;
+        }
+        ResourceSet set = brain.getOurPlayerData().getResources();
+        return set.getAmount(SOCResourceConstants.CLAY) >= 2 &&
+                set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
+                set.getAmount(SOCResourceConstants.WHEAT) >= 1 &&
+                set.getAmount(SOCResourceConstants.WOOD) >= 2;
+    }
+    
+    public static SOCResourceSet getResourcesFor(int type) {
+        SOCResourceSet set = new SOCResourceSet();
+        switch (type) {
+            case SOCPossiblePiece.ROAD: {
+                set.add(1, SOCResourceConstants.CLAY);
+                set.add(1, SOCResourceConstants.WOOD);
+                return set;
+            }
+            case SOCPossiblePiece.SETTLEMENT: {
+                set.add(1, SOCResourceConstants.CLAY);
+                set.add(1, SOCResourceConstants.WOOD);
+                set.add(1, SOCResourceConstants.SHEEP);
+                set.add(1, SOCResourceConstants.WHEAT);
+                return set;
+            }
+            case SOCPossiblePiece.CITY: {
+                set.add(3, SOCResourceConstants.ORE);
+                set.add(2, SOCResourceConstants.WHEAT);
+                return set;
+            }
+            case SOCPossiblePiece.CARD: {
+                //TODO check if cards are left
+                set.add(1, SOCResourceConstants.ORE);
+                set.add(1, SOCResourceConstants.WHEAT);
+                set.add(1, SOCResourceConstants.SHEEP);
+                return set;
+            }
+        }
+        return set;
+    }
+
+    public static boolean haveResourcesFor(int type, SOCRobotBrain brain) {
+        return haveResourcesFor(type, brain, brain.getOurPlayerData().getResources());
+    }
+
+    public static boolean haveResourcesFor(int type, SOCRobotBrain brain, ResourceSet set) {
+        D.ebugPrintln("Brain thinks bot has: " + set);
+    
+        switch (type) {
+            case SOCPossiblePiece.ROAD: {
+                if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT) {
+                    return false;
+                }
+                return set.getAmount(SOCResourceConstants.CLAY) >= 1 &&
+                        set.getAmount(SOCResourceConstants.WOOD) >= 1;
+            }
+            case SOCPossiblePiece.SETTLEMENT: {
+                if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCSettlement).count() == SOCPlayer.SETTLEMENT_COUNT) {
+                    return false;
+                }
+                return set.getAmount(SOCResourceConstants.CLAY) >= 1 &&
+                        set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
+                        set.getAmount(SOCResourceConstants.WHEAT) >= 1 &&
+                        set.getAmount(SOCResourceConstants.WOOD) >= 1;
+            }
+            case SOCPossiblePiece.CITY: {
+                if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCCity).count() == SOCPlayer.CITY_COUNT) {
+                    return false;
+                }
+                return set.getAmount(SOCResourceConstants.ORE) >= 3 &&
+                        set.getAmount(SOCResourceConstants.WHEAT) >= 2;
+            }
+            case SOCPossiblePiece.CARD: {
+                //TODO check if cards are left
+                return set.getAmount(SOCResourceConstants.ORE) >= 1 &&
+                        set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
+                        set.getAmount(SOCResourceConstants.WHEAT) >= 1;
+            }
+        }
+        return false;
+    }
+
+    public static Optional<SOCPossibleSettlement> findQualitySettlementFor(List<Integer> resources, NDRobotBrain brain) {
+        D.ebugPrintln("Finding quality settlement");
+        return Optional.ofNullable(bestPossibleSettlement(brain.getGame(), brain.getOurPlayerData(), resources));
+    }
+
+    public static Optional<SOCPossibleCity> findQualityCityFor(List<Integer> resources, NDRobotBrain brain) {
+        D.ebugPrintln("Finding quality city");
+        SOCGame game = brain.getGame();
+        Vector<SOCSettlement> ourSettlements = brain.getOurPlayerData().getSettlements();
+        if (resources.isEmpty()) {
+            return ourSettlements.stream()
+                    .map(SOCPlayingPiece::getCoordinates)
+                    .sorted(Comparator.comparing(node -> totalProbabilityAtNode(game, node)))
+                    .map(node -> new SOCPossibleCity(brain.getOurPlayerData(), node))
+                    .findFirst();
+        }
+        return ourSettlements.stream()
+                .filter(settlement -> settlement.getAdjacentHexes().stream()
+                        .anyMatch(hex -> resources.contains(game.getBoard().getHexTypeFromCoord(hex)))
+                )
+                .map(SOCPlayingPiece::getCoordinates)
+                .sorted(Comparator.comparing(node -> totalProbabilityAtNode(game, node)))
+                .map(node -> new SOCPossibleCity(brain.getOurPlayerData(), node))
+                .findFirst();
+    }
+
+    public static Optional<SOCPossibleSettlement> findQualitySettlement(NDRobotBrain brain) {
+        return findQualitySettlementFor(Collections.emptyList(), brain);
+    }
+
+    public static Optional<SOCPossibleCity> findQualityCity(NDRobotBrain brain) {
+        return findQualityCityFor(Collections.emptyList(), brain);
+    }
+
+    public static Optional<SOCPossiblePiece> findQualityRoadForLongestRoad(NDRobotBrain brain) {
+        D.ebugPrintln("Finding quality road for longest road");
+        return Optional.ofNullable(bestPossibleLongRoad(brain.getGame(), brain.getOurPlayerData()));
+    }
+
+    public static Optional<SOCPossiblePiece> findQualityRoadForExpansion(NDRobotBrain brain) {
+        D.ebugPrintln("Finding quality road for expansion");
+        SOCGame game = brain.getGame();
+        Set<Integer> othersSettlements = game.getBoard().getSettlements().stream()
+                .filter(socSettlement -> socSettlement.getPlayerNumber() != brain.getOurPlayerNumber())
+                .map(SOCPlayingPiece::getCoordinates)
+                .collect(Collectors.toSet());
+        Set<Integer> invalidSettlements = othersSettlements.stream()
+                .flatMap(node -> Stream.concat(Stream.of(node), game.getBoard().getAdjacentNodesToNode(node).stream()))
+                .collect(Collectors.toSet());
+        Set<Integer> occupiedRoads = game.getBoard().getRoadsAndShips().stream()
+                .map(SOCPlayingPiece::getCoordinates)
+                .collect(Collectors.toSet());
+        HashSet<Integer> visitedNodes = new HashSet<>();
+        // stores the road that was used to get to a node
+        HashMap<Integer, Integer> getTo = new HashMap<>();
+
+        // start frontier as all the nodes that are one buildable road away from where we already have roads
+        // and set all getTo
+        HashSet<Integer> frontier = brain.getOurPlayerData().getRoadNodes().stream()
+                .filter(node -> !othersSettlements.contains(node))
+                .flatMap(node -> game.getBoard().getAdjacentEdgesToNode(node).stream()
+                        .filter(edge -> !occupiedRoads.contains(edge))
+                        // set getTo if not already set
+                        .peek(edge -> getTo.put(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.getOrDefault(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), edge)))
+                        .map(edge -> game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node))
+                )
+                .filter(node -> !othersSettlements.contains(node))
+                .collect(Collectors.toCollection(HashSet::new));
+
+        Predicate<Integer> isPossibleSettlement = node -> !invalidSettlements.contains(node);
+        //TODO choose to take a further settlement if it is much better than closer one
+        for(int length = 1; length < 5; length++) {
+            if(frontier.stream().anyMatch(isPossibleSettlement)) {
+                return frontier.stream()
+                        .filter(isPossibleSettlement)
+                        .sorted() //TODO add value comparison, and consider long term growth
+                        .findFirst()
+                        .map(node -> new SOCPossibleRoad(brain.getOurPlayerData(), getTo.get(node), null));
+            }
+            visitedNodes.addAll(frontier);
+            frontier = frontier.stream()
+                    .flatMap(node -> game.getBoard().getAdjacentEdgesToNode(node).stream()
+                            .filter(edge -> !occupiedRoads.contains(edge))
+                            .peek(edge -> getTo.put(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.getOrDefault(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.get(node))))
+                            .map(edge -> game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node))
+                    )
+                    .filter(node -> !othersSettlements.contains(node) && !visitedNodes.contains(node))
+                    .collect(Collectors.toCollection(HashSet::new));
+        }
+        return Optional.empty(); //TODO add quality road search based on resources like with settlements & cities
+    }
+
+
+    public static SOCResourceSet getExtantResources(SOCRobotBrain brain) {
+        return Arrays.stream(brain.getGame().getPlayers())
+                .map(SOCPlayer::getResources)
+                .collect(SOCResourceSet::new, SOCResourceSet::add, SOCResourceSet::add);
+    }
+
+    public static Map<Integer, Integer> getProbabilityForResource(SOCRobotBrain brain) {
+        SOCBoard board = brain.getGame().getBoard();
+        //get all the hexes around a settlement
+        Stream<Integer> settlementHexes = brain.getOurPlayerData().getSettlements().stream()
+                .map(SOCSettlement::getAdjacentHexes)
+                .flatMap(Collection::stream);
+
+        //get all hexes around a city
+        Stream<Integer> cityHexes = brain.getOurPlayerData().getCities().stream()
+                .map(SOCCity::getAdjacentHexes)
+                .flatMap(Collection::stream);
+        //double city hexes since cities give double
+        cityHexes = Stream.concat(cityHexes, cityHexes);
+
+        //create a map of resource type to the total probability
+        return Stream.concat(settlementHexes, cityHexes)
+                .collect(Collectors.groupingBy(board::getHexTypeFromCoord, Collectors.summingInt(board::getHexNumFromCoord)));
+    }
+
 }

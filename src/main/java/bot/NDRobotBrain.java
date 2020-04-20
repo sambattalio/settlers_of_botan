@@ -1,6 +1,7 @@
 package bot;
 
 import bot.decision.DecisionTreeDM;
+import bot.decision.DecisionTreeType;
 
 import soc.game.SOCGame;
 import soc.message.SOCMessage;
@@ -15,6 +16,8 @@ import soc.robot.SOCPossibleRoad;
 import soc.game.SOCRoad;
 import soc.game.SOCResourceSet;
 import bot.decision.DecisionTreeType;
+import soc.game.SOCResourceSet;
+
 import soc.debug.D;
 
 public class NDRobotBrain extends SOCRobotBrain {
@@ -35,6 +38,8 @@ public class NDRobotBrain extends SOCRobotBrain {
         openingBuildStrategy = new NDOpeningBuildStrategy(game, ourPlayerData);
     }
      
+    private boolean attemptTrade = false;
+    
     public void setWaitingResponse(boolean b) {
     	waitingForTradeResponse = b;
     }
@@ -47,12 +52,8 @@ public class NDRobotBrain extends SOCRobotBrain {
     	tradeResponseTimeoutSec = i;
     }
     
-    public void setCounter(int i) {
-    	counter = i;
-    }
-
-    public void setFour(boolean should){
-	NDRobotNegotiator.shouldFour = should;
+    public void setAttemptTrade(boolean b) {
+    	attemptTrade = b;
     }
 
     private boolean playRoadCard() {
@@ -181,18 +182,36 @@ public class NDRobotBrain extends SOCRobotBrain {
     }
     */
     
-    public boolean trade(SOCPossiblePiece p) {
+    @Override
+    protected void buildOrGetResourceByTradeOrCard() throws IllegalStateException {
+    	D.ebugPrintln("!---- BuildOrGetResourcesByTradeOrCard -----!");
+    	SOCPossiblePiece targetPiece = buildingPlan.peek();
+    	SOCResourceSet targetResources = targetPiece.getResourcesToBuild();
     	
-    	boolean result = makeOffer(p);
-
-    	if(!result) {
-    	    D.ebugPrintln("No offer made");
+    	negotiator.setTargetPiece(ourPlayerNumber, targetPiece);
+    	
+    	if (! expectWAITING_FOR_MONOPOLY) {
+    		
+    		if ((!ourPlayerData.getResources().contains(targetResources))) {
+    			 waitingForTradeResponse = false;
+    			 attemptTrade = false;
+    			
+    			 makeOffer(targetPiece);
+    			 pause(1000);
+    		}
+    		
+    		if (! waitingForTradeResponse) {
+    			if (tradeToTarget2(targetResources))
+                {
+                    counter = 0;
+                    waitingForTradeMsg = true;
+                    pause(1500);
+                }
+    		}
+    		
+	    	if ((! (waitingForTradeMsg || waitingForTradeResponse)) && ourPlayerData.getResources().contains(targetResources)) {
+	    		buildRequestPlannedPiece();
+	    	}
     	}
-
-	pause(5000);
-	D.ebugPrintln("Done Pause");
-    	
-    	return result;
     }
-
 }

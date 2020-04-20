@@ -3,7 +3,6 @@ package bot.decision;
 import soc.debug.D;
 import soc.game.SOCGame;
 import soc.game.SOCPlayer;
-import soc.robot.SOCRobotBrain;
 
 public enum DecisionTreeType {
     LONGEST_ROAD(),

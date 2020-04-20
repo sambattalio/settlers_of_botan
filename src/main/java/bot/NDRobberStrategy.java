@@ -1,5 +1,6 @@
 package bot;
 
+import soc.debug.D;
 import soc.game.SOCGame;
 import soc.game.SOCPlayer;
 import soc.robot.RobberStrategy;
@@ -32,7 +33,7 @@ public class NDRobberStrategy extends RobberStrategy {
 
     /**
      * Finds player number of player we think is doing "Best"
-     * @return player number of player in lead not us
+     * @return player number of plaer in lead not us
      */
     SOCPlayer findTargetEnemy() {
         int highestVP = -1;
@@ -67,7 +68,7 @@ public class NDRobberStrategy extends RobberStrategy {
             if (hex == currentRobberLocation) continue; 
             // make sure our player wont be playing themselves
             if (!ourPlayerData.getNumbers().hasNoResourcesForHex(hex)) continue;
-
+            D.ebugPrintln("test" + String.valueOf(hex));
             if (!targetEnemy.getNumbers().hasNoResourcesForHex(hex))
                 return hex;
         }
@@ -76,12 +77,19 @@ public class NDRobberStrategy extends RobberStrategy {
     }
 
     public void setSortedNodes() {
-        List<Map.Entry<Integer, Integer>> list = new LinkedList<Map.Entry<Integer, Integer>>(NDOpeningBuildStrategy.probMap.entrySet());
 
+        HashMap<Integer, Integer> coordProbs = new HashMap<>();
+        for (int hex : game.getBoard().getLandHexCoords()) {
+            coordProbs.put(hex, game.getBoard().getNumberOnHexFromCoord(hex)); 
+        }
+
+        List<Map.Entry<Integer, Integer>> list = new LinkedList<Map.Entry<Integer, Integer>>(coordProbs.entrySet());
         // Sort
         Collections.sort(list, new Comparator<Map.Entry<Integer, Integer>>() {
             public int compare(Map.Entry<Integer,Integer> e1, Map.Entry<Integer, Integer> e2) {
-                return (e2.getValue()).compareTo(e1.getValue()); // descending
+                Integer val1 = (e1.getValue() > 7) ? 13 - e1.getValue() : e1.getValue() - 1;
+                Integer val2 = (e2.getValue() > 7) ? 13 - e2.getValue() : e2.getValue() - 1;
+                return (val2).compareTo(val1); // descending
             }
         });
     

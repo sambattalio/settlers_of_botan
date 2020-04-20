@@ -31,14 +31,16 @@ public class NDMonopolyStrategy extends MonopolyStrategy {
             if (p == ourPlayerData.getPlayerNumber()) continue;
             resCounts.add(game.getPlayer(p).getResources());
         }
-        
+       
+        D.ebugPrintln("monopoly check total of all enemies: " + resCounts.toString());
+
         // loop over resource types and find best
         int bestRes = -1;
         int mostRes = -1;
-        for (int i = SOCResourceConstants.CLAY; i < SOCResourceConstants.WOOD; i++) {
+        for (int i = SOCResourceConstants.CLAY; i <= SOCResourceConstants.WOOD; i++) {
             if (resCounts.getAmount(i) > mostRes) {
                 bestRes = i;
-                mostRes = i;
+                mostRes = resCounts.getAmount(i);
             }
         }
         D.ebugPrintln("Picking resource enum value " + String.valueOf(bestRes) + " for monopoly");

@@ -10,6 +10,7 @@ import soc.robot.SOCPossibleCity;
 import soc.robot.SOCPossiblePiece;
 import soc.robot.SOCPossibleSettlement;
 import soc.robot.SOCPossibleRoad;
+import soc.robot.SOCRobotDM;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -23,16 +24,16 @@ import soc.debug.D;
 public class LargestArmyStrategy {
     public static boolean shouldUse(SOCGame game, SOCPlayer player) {
     	//TODO add check for number of cards left
-        return NDHelpers.isCompetitiveForLargestArmy(game, player.getPlayerNumber());
+    	return (NDHelpers.isCompetitiveForLargestArmy(game, player.getPlayerNumber())) && !(NDHelpers.canSwitchFromLargestArmy(game, player.getPlayerNumber()));
     }
 
     public static SOCPossiblePiece plan(DecisionTreeDM decisionTreeDM) {
+    	D.ebugPrintln("----- Start Largest Army Plan-----");
         Optional<SOCPossibleSettlement> possibleSettlement;
         Optional<SOCPossibleCity> possibleCity;
         Optional<SOCPossiblePiece> possibleRoad;
 
         if ((possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	D.ebugPrintln("Maybe City");
         	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- City -----");
         	    return possibleCity.get();
@@ -62,7 +63,6 @@ public class LargestArmyStrategy {
         }
 	
         if (NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	D.ebugPrintln("Maybe Settlement");
         	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- Settlement -----");
 		    	return possibleSettlement.get();

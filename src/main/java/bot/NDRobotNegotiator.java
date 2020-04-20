@@ -146,8 +146,7 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
         }
 
         public boolean portWorthIt(SOCPossiblePiece targetPiece) {
-	    SOCResourceSet actualToBuild = targetPiece.getResourcesToBuild();
-	    D.ebugPrintln("Target resources in ports: " + actualToBuild);
+        	SOCResourceSet actualToBuild = targetPiece.getResourcesToBuild();
             SOCResourceSet playerResources  = this.player.getResources();
             boolean portFlags[] = this.player.getPortFlags();
             
@@ -157,12 +156,10 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
                 int threshold = (portType == SOCBoard.MISC_PORT) ? 3 : 2;
 
                 if (playerResources.getAmount(portType) - actualToBuild.getAmount(portType) >= threshold) {
-                	D.ebugPrintln("Port worth is true");
                     return true;
                 }
             }
 
-	    D.ebugPrintln("Port worth is false");
             return false;
         }
 
@@ -228,7 +225,7 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 		
 		return null;
 	}
-
+	
 	@Override
 	public SOCTradeOffer makeOffer(SOCPossiblePiece targetPiece) {
 		D.ebugPrintln("----- Make Offer Thinking -----");
@@ -266,8 +263,6 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 			}
 		}
 
-		D.ebugPrintln("freqs: " + Arrays.toString(freqs));
-
 		// Get Number Of Each Resource That I Currently Have
 		Map<Integer, Integer> initialResourceMap = new HashMap<>();
 		LinkedHashMap<Integer, Integer> resourcesSorted = new LinkedHashMap<>();
@@ -280,8 +275,6 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 				.stream()
 				.sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
 				.forEachOrdered(x -> resourcesSorted.put(x.getKey(), x.getValue()));
-
-		D.ebugPrintln("Resources Sorted: " + resourcesSorted);
 
 			// Figure out what to give
 			switch(type) {
@@ -419,8 +412,15 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 				players_to_offer[p.getPlayerNumber()] = false;
 			}
 		}
+		
+		boolean someoneToTradeTo = false;
+		for(SOCPlayer p : game.getPlayers()) {
+			if(players_to_offer[p.getPlayerNumber()]) {
+				someoneToTradeTo = true;
+			}
+		}
 
-		if(giveResourceSet.getTotal() != 0 && getResourceSet.getTotal() != 0) {
+		if(someoneToTradeTo && giveResourceSet.getTotal() != 0 && getResourceSet.getTotal() != 0) {
 			SOCTradeOffer offer = new SOCTradeOffer(game.getName(), playerNo, players_to_offer, giveResourceSet, getResourceSet);
 
 			boolean match = false;
@@ -429,7 +429,6 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 			while ((offersMadeIter.hasNext() && !match))
 			{
 				SOCTradeOffer pastOffer = offersMadeIter.next();
-				D.ebugPrintln("Past Offer: " + pastOffer);
 
 				if ((pastOffer != null) && (pastOffer.getGiveSet().equals(giveResourceSet)) && (pastOffer.getGetSet().equals(getResourceSet)))
 				{
@@ -440,7 +439,6 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 				addToOffersMade(offer);
 				return offer;
 			}
-			D.ebugPrintln("Claim Match");
 		}
 		
 		D.ebugPrintln("Trading returned null");
@@ -460,7 +458,6 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 		brain.setWaitingResponse(true);
 		
 		if(portWorthIt(targetPiece)) {
-		    D.ebugPrintln("----- He be looking at ports -----");
 		    offer = attemptPortTrade(determineWhatIsNeeded(targetPiece.getType()), targetPiece);
 		}
 		
@@ -468,7 +465,6 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 			return offer;
 		}
 		
-		D.ebugPrintln("Attempt Four");
 		for (int r : resourceArray) {
 			if(resources.getAmount(r) > 3){
 				switch(targetPiece.getType()) {

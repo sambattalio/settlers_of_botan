@@ -9,6 +9,7 @@ import soc.robot.SOCPossibleCity;
 import soc.robot.SOCPossiblePiece;
 import soc.robot.SOCPossibleSettlement;
 import soc.robot.SOCPossibleRoad;
+import soc.robot.SOCRobotDM;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -28,8 +29,8 @@ public class LongestRoadStrategy {
 
     public static boolean shouldUse(SOCGame game, SOCPlayer player) {
     	//TODO check how far ahead we are and make sure we are not trapped
-        return NDHelpers.isLongestRoadPossible(game, player.getPlayerNumber());
-    };
+        return NDHelpers.isLongestRoadPossible(game, player.getPlayerNumber()) && !(NDHelpers.canSwitchFromLongestRoad(game, player.getPlayerNumber()));
+    }
 
     public static SOCPossiblePiece plan(DecisionTreeDM decisionTreeDM) {
     	D.ebugPrintln("----- Start Longest Road Plan-----");
@@ -47,8 +48,8 @@ public class LongestRoadStrategy {
 			}
         }
 
+        //decisionTreeDM.getBrain().getAttempt(SETTLEMENT) && 
         if (NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	D.ebugPrintln("Maybe Settlement");
         	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- Settlement -----");
 		    	return possibleSettlement.get();
@@ -60,6 +61,7 @@ public class LongestRoadStrategy {
         	D.ebugPrintln("No settlement");
         }	
 
+        //decisionTreeDM.getBrain().getAttempt(ROAD) && 
         if((possibleRoad = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain())).isPresent()) {
 	        if (NDHelpers.haveResourcesFor(ROAD, decisionTreeDM.getBrain())) {
 	            D.ebugPrintln("----- Road -----");
@@ -72,9 +74,8 @@ public class LongestRoadStrategy {
         	D.ebugPrintln("No Road");
         }
 
-
+        //decisionTreeDM.getBrain().getAttempt(CITY) && 
         if ((possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
-        	D.ebugPrintln("Maybe City");
         	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- City -----");
         	    return possibleCity.get();

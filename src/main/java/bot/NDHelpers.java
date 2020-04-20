@@ -61,6 +61,8 @@ public class NDHelpers {
         /* Check diff in length */
         SOCPlayer ndBot = game.getPlayer(playerNo);
 
+        D.ebugPrintln("ND Bot has: " + String.valueOf(ndBot.getNumKnights()) + " knights -- best player otherwise has: " + String.valueOf(bestPlayer.getNumKnights()));
+
         return game.getNumDevCards() != 0 && abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= MAX_ARMY_DIFF;
     }
 
@@ -159,6 +161,7 @@ public class NDHelpers {
         	possible_nodes = findPotentialSettlementsFor(game, playerNo, Collections.emptyList());
         }
 
+        if (possible_nodes.size() == 0) return null;
         int bestNode = possible_nodes.firstElement();
 
         for (int node : possible_nodes) {

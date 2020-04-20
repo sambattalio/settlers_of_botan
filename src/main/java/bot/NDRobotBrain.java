@@ -111,11 +111,12 @@ public class NDRobotBrain extends SOCRobotBrain {
            
             List<SOCPossiblePiece> pieces = NDHelpers.bestPossibleLongRoad(game, ourPlayerData, 2);
 
+            if (pieces.size() < 2) return false;
+            whatWeWantToBuild = new SOCRoad(ourPlayerData, pieces.get(0).getCoordinates(), null);
+            buildingPlan.push(pieces.get(1));
             waitingForGameState = true;
             counter = 0;
             expectPLACING_FREE_ROAD1 = true;
-            whatWeWantToBuild = new SOCRoad(ourPlayerData, pieces.get(0).getCoordinates(), null);
-            buildingPlan.push(pieces.get(1));
             client.playDevCard(game, SOCDevCardConstants.ROADS);
             pause(1500);
             return true;
@@ -268,7 +269,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     	
     	negotiator.setTargetPiece(ourPlayerNumber, targetPiece);
     
-        //tryToPlayDevCard();
+        tryToPlayDevCard();
 
     	if (! expectWAITING_FOR_MONOPOLY) {
     		

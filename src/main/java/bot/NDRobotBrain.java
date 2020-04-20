@@ -111,8 +111,9 @@ public class NDRobotBrain extends SOCRobotBrain {
                 buildingPlan.push(first);
             }*/
             List<SOCPossiblePiece> pieces = NDHelpers.bestPossibleLongRoad(game, ourPlayerData, 2);
+            if (pieces.size() < 2) return false;
             whatWeWantToBuild = new SOCRoad(ourPlayerData, pieces.get(0).getCoordinates(), null);
-            buildingPlan.push(pieces.get(pieces.size() - 1));
+            buildingPlan.push(pieces.get(1));
             waitingForGameState = true;
             counter = 0;
             expectPLACING_FREE_ROAD1 = true;

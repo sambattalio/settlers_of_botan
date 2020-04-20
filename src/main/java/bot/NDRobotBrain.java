@@ -9,6 +9,7 @@ import soc.robot.SOCRobotClient;
 import soc.util.CappedQueue;
 import soc.util.SOCRobotParameters;
 import soc.robot.SOCPossiblePiece;
+import soc.game.SOCResourceSet;
 
 import soc.debug.D;
 
@@ -30,6 +31,8 @@ public class NDRobotBrain extends SOCRobotBrain {
         openingBuildStrategy = new NDOpeningBuildStrategy(game, ourPlayerData);
     }
      
+    private boolean attemptTrade = false;
+    
     public void setWaitingResponse(boolean b) {
     	waitingForTradeResponse = b;
     }
@@ -42,26 +45,40 @@ public class NDRobotBrain extends SOCRobotBrain {
     	tradeResponseTimeoutSec = i;
     }
     
-    public void setCounter(int i) {
-    	counter = i;
-    }
-
-    public void setFour(boolean should){
-	NDRobotNegotiator.shouldFour = should;
+    public void setAttemptTrade(boolean b) {
+    	attemptTrade = b;
     }
     
-    public boolean trade(SOCPossiblePiece p) {
+    @Override
+    protected void buildOrGetResourceByTradeOrCard() throws IllegalStateException {
+    	D.ebugPrintln("!---- BuildOrGetResourcesByTradeOrCard -----!");
+    	SOCPossiblePiece targetPiece = buildingPlan.peek();
+    	SOCResourceSet targetResources = targetPiece.getResourcesToBuild();
     	
-    	boolean result = makeOffer(p);
-
-    	if(!result) {
-    	    D.ebugPrintln("No offer made");
+    	negotiator.setTargetPiece(ourPlayerNumber, targetPiece);
+    	
+    	if (! expectWAITING_FOR_MONOPOLY) {
+    		
+    		if (attemptTrade && (!ourPlayerData.getResources().contains(targetResources))) {
+    			 waitingForTradeResponse = false;
+    			 attemptTrade = false;
+    			
+    			 makeOffer(targetPiece);
+    			 
+    		}
+    		
+    		if (! waitingForTradeResponse) {
+    			if (tradeToTarget2(targetResources))
+                {
+                    counter = 0;
+                    waitingForTradeMsg = true;
+                    pause(1500);
+                }
+    		}
+    		
+	    	if ((! (waitingForTradeMsg || waitingForTradeResponse)) && ourPlayerData.getResources().contains(targetResources)) {
+	    		buildRequestPlannedPiece();
+	    	}
     	}
-
-	pause(5000);
-	D.ebugPrintln("Done Pause");
-    	
-    	return result;
     }
-
 }

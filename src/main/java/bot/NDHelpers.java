@@ -265,46 +265,67 @@ public class NDHelpers {
         Set<Integer> allRoads = board.getRoadsAndShips().stream()
                 .map(SOCPlayingPiece::getCoordinates)
                 .collect(Collectors.toSet());
-        Set<Integer> otherSettlements = Stream.concat(board.getSettlements().stream(), board.getCities().stream())
+        Set<Integer> allSettlements = Stream.concat(board.getSettlements().stream(), board.getCities().stream())
                 .map(SOCPlayingPiece::getCoordinates)
                 .collect(Collectors.toSet());
         List<Set<Integer>> roadNetworks = getRoadNetworks(game, player);
 
         player.calcLongestRoad2();
         Vector<SOCLRPathData> pathData = player.getLRPaths();
+
+        List<Integer> bestSoFar = new ArrayList<>();
+
         if (roadNetworks.size() == 2) {
             Optional<List<Integer>> connection = Optional.of(getBestConnection(
                     Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
                     Arrays.asList(pathData.get(1).getBeginning(), pathData.get(1).getEnd()),
                     board,
                     allRoads,
-                    otherSettlements
+                    allSettlements
             )).orElseGet(() -> getBestConnection(
                     roadNetworks.get(0),
                     roadNetworks.get(1),
                     board,
                     allRoads,
-                    otherSettlements
+                    allSettlements
             ));
             if(connection.isPresent()) {
                 //TODO compare nodes start to end vs end to start
-                List<SOCPossiblePiece> connections = new ArrayList<>();
-                Iterator<Integer> iterator = connection.get().iterator();
-                int last = iterator.next();
-                while(iterator.hasNext()){
-                    int current = iterator.next();
-                    int edge = board.getEdgeBetweenAdjacentNodes(last, current);
-                    connections.add(new SOCPossibleRoad(player, edge, null));
-                    last = current;
-                }
                 //TODO not enough in connections
-                return connections;
+                bestSoFar.addAll(connection.get());
             }
         }
+        if(bestSoFar.size() < len) {
 
-        return Stream.of(pathData.get(0).getBeginning(), pathData.get(0).getEnd())
-                .flatMap(node -> board.getAdjacentEdgesToNode(node).stream())
-                .filter(edge -> !allRoads.contains(edge))
+            List<Integer> destinations = allSettlements.stream()
+                    .flatMap(node -> board.getAdjacentNodesToNode(node).stream()
+                            .map(board::getAdjacentEdgesToNode)
+                            .flatMap(Collection::stream)
+                    ).filter(node ->
+                            !allSettlements.contains(node) &&
+                                    board.getAdjacentNodesToNode(node).stream().noneMatch(allSettlements::contains))
+                    .collect(Collectors.toList());
+
+            Optional<List<Integer>> pathToNearestPossibleSettlementOffLongest = getBestConnection(
+                    Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
+                    destinations,
+                    board,
+                    allRoads,
+                    allSettlements
+            );
+
+            pathToNearestPossibleSettlementOffLongest.ifPresent(bestSoFar::addAll);
+            //TODO add loop?
+        }
+
+        if(bestSoFar.size() < len) {
+            bestSoFar.addAll(Stream.of(pathData.get(0).getBeginning(), pathData.get(0).getEnd())
+                    .flatMap(node -> board.getAdjacentEdgesToNode(node).stream())
+                    .filter(edge -> !allRoads.contains(edge))
+                    .collect(Collectors.toList()));
+
+        }
+        return bestSoFar.stream()
                 .map(edge -> new SOCPossibleRoad(player, edge, null))
                 .collect(Collectors.toList());
     }
@@ -349,10 +370,9 @@ public class NDHelpers {
         int currentNode = endNode;
         List<Integer> backtrack = new ArrayList<>();
         while(!startNodes.contains(currentNode)) {
-            backtrack.add(currentNode);
+            backtrack.add(board.getEdgeBetweenAdjacentNodes(currentNode, parentNode.get(currentNode)));
             currentNode = parentNode.get(currentNode);
         }
-        backtrack.add(currentNode);
         return Optional.of(backtrack);
     }
 

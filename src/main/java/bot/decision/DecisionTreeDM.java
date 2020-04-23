@@ -29,6 +29,8 @@ public class DecisionTreeDM extends SOCRobotDM {
     @Override
     public void planStuff(int strategy) {
         D.ebugPrintln("----- Plan Stuff " + callCount++ + " -----");
+        D.ebugPrintln("Resources: " + brain.getOurPlayerData().getResources().toFriendlyString());
+        D.ebugPrintln("Inventory: " + brain.getOurPlayerData().getInventory().getNumUnplayed());
         try {
             switch(DecisionTreeType.whichUse(game, brain.getOurPlayerData())) {
                 case LONGEST_ROAD:

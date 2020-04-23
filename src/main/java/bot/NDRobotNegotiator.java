@@ -123,8 +123,8 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 			}
 		}
 
-		D.ebugPrintln("What Bot Has: " + resources.toShortString());
-		D.ebugPrintln("What's needed: " + needed.toShortString());
+		D.ebugPrintln("What Bot Has: " + resources.toFriendlyString());
+		D.ebugPrintln("What's needed: " + needed.toFriendlyString());
 
 		return needed;
 	}
@@ -344,7 +344,7 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 						if (key == SOCResourceConstants.ORE || key == SOCResourceConstants.WHEAT) {
 							continue;
 						} else if (freqs[toArrayIdx(key)] > 6 && resources.getAmount(key) > 0){ //Not Sure What key Here
-							D.ebugPrintln("Trade " + toStringResources(key) + "Because High Frequency and not ore or wheat - for city");
+							D.ebugPrintln("Trade " + toStringResources(key) + " because high frequency and not ore or wheat - for city");
 							giveResourceSet.add(1, key);
 							break;
 						}
@@ -400,8 +400,8 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 			}
 		}
 
-		D.ebugPrintln("Official giveResourceSet: " + giveResourceSet);
-		D.ebugPrintln("Official getResourceSet: " + getResourceSet);
+		D.ebugPrintln("Official giveResourceSet: " + giveResourceSet.toFriendlyString());
+		D.ebugPrintln("Official getResourceSet: " + getResourceSet.toFriendlyString());
 
 		boolean[] players_to_offer = new boolean[game.maxPlayers];
 		Arrays.fill(players_to_offer, true);

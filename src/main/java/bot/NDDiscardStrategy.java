@@ -37,10 +37,13 @@ public class NDDiscardStrategy extends DiscardStrategy {
     public SOCResourceSet discard(int numDiscards, Stack<SOCPossiblePiece> buildingPlan) {
         switch (DecisionTreeType.whichUse(this.game, this.ourPlayerData)) {
             case LONGEST_ROAD:
+                D.ebugPrintln("Discarding based off of longest road");
                 return discardPrioritize(numDiscards, Arrays.asList(ROAD, SETTLEMENT));
             case LARGEST_ARMY:
+                D.ebugPrintln("Discarding based off of largest army");
                 return discardPrioritize(numDiscards, Collections.singletonList(CARD));
             default:
+                D.ebugPrintln("Discarding");
                 return discardPrioritize(numDiscards, Collections.emptyList());
         }
     }

@@ -1,1 +1,4 @@
-seq 10 | xargs -I% -P 5 bash -c "java -cp \"lib/jsettlers2/build/libs/JSettlers-2.3.00.jar:build/classes/java/main\" soc.server.SOCServer -Djsettlers.allow.debug=Y -Djsettlers.startrobots=4 -Djsettlers.bots.percent3p=100 -Djsettlers.bots.start3p=1,bot.NDRobotClient -Djsettlers.bots.botgames.parallel=1 -Djsettlers.bots.botgames.wait_sec=1 -Djsettlers.bots.botgames.total=100 -Djsettlers.bots.botgames.shutdown=Y -Djsettlers.port=808% -Djsettlers.bots.cookie=foobar 2>&1" | grep -o -P "(?<=STATS:)(.+)$"
+rm server.log stat.log resources.log other-points.log points.log output.log
+NUM=${1:-10}
+THREAD=${2:-10}
+seq "$THREAD" | xargs -I% -P "$THREAD" bash -c "java -cp \"lib/jsettlers2/build/libs/JSettlers-2.3.00.jar:build/classes/java/main\" soc.server.SOCServer -Dbot.stats -Djsettlers.allow.debug=Y -Djsettlers.startrobots=4 -Djsettlers.bots.percent3p=100 -Djsettlers.bots.start3p=1,bot.NDRobotClient -Djsettlers.bots.botgames.parallel=1 -Djsettlers.bots.botgames.wait_sec=1 -Djsettlers.bots.botgames.total=$NUM -Djsettlers.bots.botgames.shutdown=Y -Djsettlers.port=808% -Djsettlers.bots.cookie=foobar 2>&1"

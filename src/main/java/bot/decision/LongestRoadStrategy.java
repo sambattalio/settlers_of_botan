@@ -8,12 +8,9 @@ import soc.robot.SOCPossibleCard;
 import soc.robot.SOCPossibleCity;
 import soc.robot.SOCPossiblePiece;
 import soc.robot.SOCPossibleSettlement;
-import soc.robot.SOCPossibleRoad;
-import soc.robot.SOCRobotDM;
 
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static soc.game.SOCResourceConstants.WOOD;
 import static soc.game.SOCResourceConstants.CLAY;

@@ -61,7 +61,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     	tradeResponseTimeoutSec = i;
     }
 
-    public static boolean getAttempt(int t) {
+    public boolean getAttempt(int t) {
     	switch(t) {
 			case SOCPossiblePiece.ROAD: 		return attemptTrade[0];
 			case SOCPossiblePiece.SETTLEMENT: 	return attemptTrade[1];
@@ -209,7 +209,7 @@ public class NDRobotBrain extends SOCRobotBrain {
      
     public boolean tryToPlayDevCard() {
         // debug loop
-        D.ebugPrintln("-- dev card acction --");
+        D.ebugPrintln("-- Trying to play dev cards --");
         for (SOCInventoryItem item : ourPlayerData.getInventory().getByState(SOCInventory.PLAYABLE)) {
             D.ebugPrintln("Has: " + item.getItemName(game, false, SOCStringManager.getClientManager()) + " playable");
         }
@@ -222,17 +222,17 @@ public class NDRobotBrain extends SOCRobotBrain {
             //if (playRoadCard()) return true;
             // first priority.. if there is a robber blocking one of our hexes -> move it
             if (!ourPlayerData.getNumbers().hasNoResourcesForHex(game.getBoard().getRobberHex())) {
-                D.ebugPrintln("Trying to move knight because one is blocking our resources");
+//                D.ebugPrintln("Trying to move knight because one is blocking our resources");
                 if (playKnightCard()) return true;
             }
             // second thing we should do is check if strategy based decision can be made
             switch(DecisionTreeType.whichUse(game, ourPlayerData)) {
                 case LONGEST_ROAD:
-                    D.ebugPrintln("Trying to play road card b/c strategy");
-                    //if (playRoadCard()) return true;
+//                    D.ebugPrintln("Trying to play road card b/c strategy");
+                    //TODO if (playRoadCard()) return true;
                     break;
                 case LARGEST_ARMY:
-                    D.ebugPrintln("Trying to play knight card b/c strategy");
+//                    D.ebugPrintln("Trying to play knight card b/c strategy");
                     if (playKnightCard()) return true;
                     break;
                 case DEFAULT:
@@ -240,9 +240,9 @@ public class NDRobotBrain extends SOCRobotBrain {
             }
 
             // Look to see if any other are valuable to play right now...  road       
-            D.ebugPrintln("trying year of plenty");
+//            D.ebugPrintln("Trying year of plenty");
             if (playYearOfPlentyCard()) return true;
-            D.ebugPrintln("trying monopoly");
+//            D.ebugPrintln("Trying monopoly");
             if (playMonopolyCard()) return true;
 
             // play knight last if should do it otherwise

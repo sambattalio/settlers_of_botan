@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.stream.Collectors;
 
 public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
 
@@ -46,41 +47,15 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
      *
      */
     private int getBestNode() {
-        int bestNode = -1;
-        int bestNodeProb = -1;
-
-        for (int node : this.ourPlayerData.getPotentialSettlements()) {
-            int probability = NDHelpers.totalProbabilityAtNode(this.game, node);
-
-            // add prob to hash map for use on second pick
-            probMap.put(node, probability);
-
-            if (probability > bestNodeProb) {
-                bestNodeProb = probability;
-                bestNode = node;
-            }
-        }
-
-        return bestNode;
+        return this.ourPlayerData.getPotentialSettlements().stream()
+                .max(Comparator.comparing(NDHelpers.totalProbabilityAtNodeMapping(game.getBoard()))).orElseThrow(() -> new IllegalStateException("No best settlement"));
     }
 
-    private List<Pair<Integer, Integer>> getTopNNodes(int n) {
-        int bestNode = -1;
-        int bestNodeProb = -1;
-        D.ebugPrintln("start topnnodes");
-
-        ArrayList<Pair<Integer, Integer>> nodeStats = new ArrayList<Pair<Integer, Integer>>();
-
-        for (int node : this.ourPlayerData.getPotentialSettlements()) {
-            int probability = probMap.get(node);
-            nodeStats.add(new Pair<Integer, Integer>(node, probability));
-        }
-
-        // sort and yeet out top N
-        Collections.sort(nodeStats, Comparator.comparing(p -> -p.getValue()));
-
-        D.ebugPrintln("end topnnodes");
-        return nodeStats.subList(0, n); 
+    private List<Integer> getTopNNodes(int n) {
+        return this.ourPlayerData.getPotentialSettlements().stream()
+                .sorted(Comparator.comparing(NDHelpers.totalProbabilityAtNodeMapping(game.getBoard())).reversed())
+                .limit(n)
+                .collect(Collectors.toList());
     }
 
     public int closestRoadToNode(int source, int target) {
@@ -91,6 +66,7 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
 
 
     public int planInitialSettlements() {
+        D.ebugPrintln("Placing first settlement");
         // the plan for the first one... find the BEST node possible
         firstSettlement = getBestNode();
 
@@ -123,35 +99,33 @@ public class NDOpeningBuildStrategy extends OpeningBuildStrategy {
     public int bestSecondSettlement() {
         // look at 5 "best" nodes left over, and compare resources to determine where to go
         // try to maximize road building first, but if can't maximize development cards, ... expansion
-        List<Pair<Integer, Integer>> nodes = getTopNNodes(5);
+        List<Integer> nodes = getTopNNodes(5);
 
-
-        Vector<Integer> longRoads = new Vector<Integer>();
-        Vector<Integer> develCoords = new Vector<Integer>();
+        Vector<Integer> longRoads = new Vector<>();
+        Vector<Integer> develCoords = new Vector<>();
         // find distance to top 5, keeping those at or above minimium distance
-        for (Pair<Integer, Integer> node : nodes) {
-            SOCResourceSet resourcesAtCoord = NDHelpers.findResourcesFromCoord(this.game, node.getKey());
+        for (int node : nodes) {
+            SOCResourceSet resourcesAtCoord = NDHelpers.findResourcesFromCoord(this.game, node);
 
             resourcesAtCoord.add(firstResources);
-            D.ebugPrintln("potential resources: " + resourcesAtCoord.toString());
             if (resourcesAtCoord.contains(NDHelpers.ROAD_SET)) {
-                longRoads.add(node.getKey());
+                longRoads.add(node);
             }
             if (resourcesAtCoord.contains(NDHelpers.DEVEL_SET)) {
-                develCoords.add(node.getKey());
+                develCoords.add(node);
             }
         }
 
         // Pick either the best (first b/c sorted on probability) or search for development card locations
         if (longRoads.size() > 0) {
-            D.ebugPrintln("Placing second for longest road");
+            D.ebugPrintln("Placing second settlement for longest road");
             secondSettlement = longRoads.get(0);
         } else if (develCoords.size() > 0) {
-            D.ebugPrintln("Placing second for development cards");
+            D.ebugPrintln("Placing second settlement for development cards");
             secondSettlement = develCoords.get(0);
         } else {
-            D.ebugPrintln("Placing second for best resources");
-            secondSettlement = nodes.get(0).getKey();
+            D.ebugPrintln("Placing second settlement for best resources");
+            secondSettlement = nodes.get(0);
         }
         return secondSettlement;
     }

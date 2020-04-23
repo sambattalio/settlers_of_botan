@@ -1,5 +1,6 @@
 package bot;
 
+import bot.decision.StrategyConstants;
 import soc.debug.D;
 import soc.game.*;
 import soc.robot.SOCPossiblePiece;
@@ -7,34 +8,22 @@ import soc.robot.SOCPossibleRoad;
 import soc.robot.SOCPossibleSettlement;
 import soc.robot.SOCRobotBrain;
 
-import soc.robot.SOCPossibleCard;
 import soc.robot.SOCPossibleCity;
-import soc.robot.SOCPossiblePiece;
-import soc.robot.SOCPossibleSettlement;
-import soc.robot.SOCPossibleRoad;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import java.util.function.Predicate;
 
-
-import javax.swing.text.html.Option;
 
 import static java.lang.Math.abs;
 
 public class NDHelpers {
 
-    static final int MAX_ROAD_DIFF = 3;
-    static final int MAX_ARMY_DIFF = 2;
-    static final int ARMY_SWITCH = 2;
-    static final int ROAD_SWITCH = 2;
-
     static final SOCResourceSet ROAD_SET = new SOCResourceSet(1, 0, 0, 0, 1, 0);
     static final SOCResourceSet DEVEL_SET = new SOCResourceSet(0, 1, 1, 1, 0, 0);
-    private static SOCGame totalProbabilityAtNodeGame;
+    private static SOCBoard totalProbabilityAtNodeBoard;
     private static HashMap<Integer, Integer> totalProbabilityAtNodeCache;
 
     /* Returns true if input player has longest or is within 3 roads */
@@ -51,7 +40,7 @@ public class NDHelpers {
         /* Check diff in length */
         SOCPlayer ndBot = game.getPlayer(playerNo);
         
-        return abs(ndBot.getLongestRoadLength() - bestPlayer.getLongestRoadLength()) <= MAX_ROAD_DIFF;
+        return abs(ndBot.getLongestRoadLength() - bestPlayer.getLongestRoadLength()) <= StrategyConstants.MAX_ROAD_DIFF;
     }
     
     /* Returns true if we have longest road and are ahead of everyone else by 2 */
@@ -73,7 +62,7 @@ public class NDHelpers {
     			}
         	}
     		
-        	return (bestPlayer.getRoadsAndShips().size() >= 15) || ((bestPlayer.getLongestRoadLength() >= 5) && ((bestPlayer.getLongestRoadLength() - secondBestPlayer.getLongestRoadLength()) >= ROAD_SWITCH));
+        	return (bestPlayer.getRoadsAndShips().size() >= 15) || ((bestPlayer.getLongestRoadLength() >= 5) && ((bestPlayer.getLongestRoadLength() - secondBestPlayer.getLongestRoadLength()) >= StrategyConstants.ROAD_SWITCH));
         } 
         
         return false;
@@ -93,9 +82,7 @@ public class NDHelpers {
         /* Check diff in length */
         SOCPlayer ndBot = game.getPlayer(playerNo);
 
-        D.ebugPrintln("ND Bot has: " + String.valueOf(ndBot.getNumKnights()) + " knights -- best player otherwise has: " + String.valueOf(bestPlayer.getNumKnights()));
-
-        return game.getNumDevCards() != 0 && abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= MAX_ARMY_DIFF;
+        return game.getNumDevCards() != 0 && abs(ndBot.getNumKnights() - bestPlayer.getNumKnights()) <= StrategyConstants.MAX_ARMY_DIFF;
     }
     
     /**
@@ -123,7 +110,7 @@ public class NDHelpers {
     			}
         	}
     		
-    		return (game.getNumDevCards() == 0) || ((bestPlayer.getNumKnights() > 3) && (bestPlayer.getNumKnights() - secondBestPlayer.getNumKnights() >= ARMY_SWITCH));
+    		return (game.getNumDevCards() == 0) || ((bestPlayer.getNumKnights() > 3) && (bestPlayer.getNumKnights() - secondBestPlayer.getNumKnights() >= StrategyConstants.ARMY_SWITCH));
         }
         
         return false;
@@ -211,7 +198,7 @@ public class NDHelpers {
         if(possibleNodes.isEmpty()) {
             possibleNodes = findPotentialSettlementsFor(game, playerNo, Collections.emptyList());
         }
-        Optional<Integer> bestNode = possibleNodes.stream().max(Comparator.comparing(node -> totalProbabilityAtNode(game, node)));
+        Optional<Integer> bestNode = possibleNodes.stream().max(Comparator.comparing(totalProbabilityAtNodeMapping(game.getBoard())));
 
         return bestNode.map(integer -> new SOCPossibleSettlement(player, integer, null)).orElse(null); //TODO add potential road list
     }
@@ -238,22 +225,11 @@ public class NDHelpers {
     }
 
     /**
-     * Returns coord of best possible road to place to maximize length
+     * Returns coords of best n possible road to place to maximize length
      *
      * @param game
      * @param player
-     * @return best road to build
-     */
-    public static SOCPossiblePiece bestPossibleLongRoad(SOCGame game, SOCPlayer player) {
-        return bestPossibleLongRoad(game, player, 1).get(0);
-    }
-
-    /**
-     * Returns coords of best 2 possible road to place to maximize length
-     *
-     * @param game
-     * @param player
-     * @return Pair of best 2 roads
+     * @return Pair of best n roads
      */
     public static List<SOCPossiblePiece> bestPossibleLongRoad(SOCGame game, SOCPlayer player, int len) {
         // TODO refactor
@@ -280,27 +256,29 @@ public class NDHelpers {
         List<Integer> bestSoFar = new ArrayList<>();
 
         if (connectedNodes.size() == 2) {
-            pathData.stream().forEach( path ->
-                    D.ebugPrintln(Integer.toHexString(path.getBeginning()) + "+=+" + Integer.toHexString(path.getEnd()))
-            );
             Optional<List<Integer>> connection = getBestConnection(
                     Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
                     Arrays.asList(pathData.get(1).getBeginning(), pathData.get(1).getEnd()),
                     board,
                     allRoads,
-                    otherSettlements
+                    otherSettlements,
+                    StrategyConstants.MAX_DISTANCE_FOR_CONNECTION
             );
-            D.ebugPrintln("Searching connection off of longest " + connection.isPresent());
 
-            if(!connection.isPresent()) {
+            if(connection.isPresent()) {
+                D.ebugPrintln("Found a connection off of the longest road");
+            } else {
                 connection = getBestConnection(
                         connectedNodes.get(0),
                         connectedNodes.get(1),
                         board,
                         allRoads,
-                        otherSettlements
+                        otherSettlements,
+                        StrategyConstants.MAX_DISTANCE_FOR_CONNECTION
                 );
-                D.ebugPrintln("Searching connection anywhere " + connection.isPresent());
+                if(connection.isPresent()) {
+                    D.ebugPrintln("Found a connection not off the longest road");
+                }
             }
 
             if(connection.isPresent()) {
@@ -308,11 +286,14 @@ public class NDHelpers {
                 //TODO not enough in connections
                 bestSoFar.addAll(connection.get());
             }
-        } else {
-            D.ebugPrintln("Already connected");
         }
-        if(bestSoFar.size() < len) {
 
+        D.ebugPrintln("LRs was " + pathData.size());
+        D.ebugPrintln("LR lengths were " + pathData.stream().map(SOCLRPathData::getLength).collect(Collectors.toList()));
+
+        List<Integer> startNodes = Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd());
+
+        if(bestSoFar.size() < len) {
             List<Integer> destinations = allSettlements.stream()
                     .flatMap(node -> board.getAdjacentNodesToNode(node).stream()
                             .map(board::getAdjacentNodesToNode)
@@ -327,46 +308,47 @@ public class NDHelpers {
 
             //TODO how to get to nearest best - prioritize by 2 away not nearest frontier
             Optional<List<Integer>> pathToNearestPossibleSettlementOffLongest = getBestConnection(
-                    Arrays.asList(pathData.get(0).getBeginning(), pathData.get(0).getEnd()),
+                    startNodes,
                     destinations,
                     board,
                     allRoads,
-                    otherSettlements
+                    otherSettlements,
+                    StrategyConstants.MAX_DISTANCE_FOR_CONNECTION
             );
-
-            D.ebugPrintln("Searching for nearest " + pathToNearestPossibleSettlementOffLongest.isPresent());
-            pathToNearestPossibleSettlementOffLongest.ifPresent(bestSoFar::addAll);
+            if(pathToNearestPossibleSettlementOffLongest.isPresent() && pathToNearestPossibleSettlementOffLongest.get().size() > 0) {
+                bestSoFar.addAll(pathToNearestPossibleSettlementOffLongest.get());
+                D.ebugPrintln("Found extension to longest road towards nearest settlement");
+            }
             //TODO add loop?
         }
 
         if(bestSoFar.size() < len) {
-            D.ebugPrintln("Searching extension ");
-            bestSoFar.addAll(Stream.of(pathData.get(0).getBeginning(), pathData.get(0).getEnd())
+            //TODO actually try to branch longer
+            List<Integer> extensions = Stream.of(pathData.get(0).getBeginning(), pathData.get(0).getEnd())
                     .flatMap(node -> board.getAdjacentEdgesToNode(node).stream())
                     .filter(edge -> !allRoads.contains(edge))
-                    .collect(Collectors.toList()));
-
+                    .filter(player::isLegalRoad)
+                    .collect(Collectors.toList());
+            if(extensions.size() > 0) {
+                D.ebugPrintln("Found extension to longest road");
+                bestSoFar.addAll(extensions);
+            }
         }
 
-        D.ebugPrintln("Done ");
         return bestSoFar.stream()
                 .map(edge -> new SOCPossibleRoad(player, edge, null))
                 .collect(Collectors.toList());
     }
 
-    public static int MAX_DEPTH = 7;
     //TODO
 
-    private static Optional<List<Integer>> getBestConnection(Collection<Integer> startNodes, Collection<Integer> endNodes, SOCBoard board, Set<Integer> forbiddenRoads, Set<Integer> forbiddenNodes) {
-        Set<Integer> visitedNodes = new HashSet<>(startNodes);
+    private static Optional<List<Integer>> getBestConnection(Collection<Integer> startNodes, Collection<Integer> endNodes, SOCBoard board, Set<Integer> forbiddenRoads, Set<Integer> forbiddenNodes, int maxDepth) {
         TreeSet<Integer> frontier = new TreeSet<>(startNodes);
         Map<Integer, Integer> parentNode = new HashMap<>();
+        endNodes.removeAll(startNodes);
         int depth = 0;
-        int endNode = -1;
-        D.ebugPrintln("Starting " + startNodes.stream().map(Integer::toHexString).collect(Collectors.joining(", ")));
-        D.ebugPrintln("Ending " + endNodes.stream().map(Integer::toHexString).collect(Collectors.joining(", ")));
-        while(frontier.size() > 0 && depth < MAX_DEPTH && endNode == -1) {
-            D.ebugPrintln("Depth " + depth + ": " + frontier.stream().map(Integer::toHexString).collect(Collectors.joining(", ")));
+        List<Integer> foundEndNodes = new ArrayList<>();
+        while(frontier.size() > 0 && depth < maxDepth && foundEndNodes.isEmpty()) {
             depth++;
             TreeSet<Integer> newFrontier = new TreeSet<>(Comparator.comparing(node -> board.getAdjacentHexesToNode(node).stream()
                 .mapToInt(board::getHexNumFromCoord)
@@ -375,10 +357,9 @@ public class NDHelpers {
             //TODO sort frontier better - monotonic?
             for(int node : frontier) {
                 if(endNodes.contains(node)) {
-                    endNode = node;
-                    break;
+                    foundEndNodes.add(node);
+                    continue;
                 }
-                visitedNodes.add(node);
                 for(int childNode : board.getAdjacentNodesToNode(node)) {
                     if(
                             forbiddenNodes.contains(childNode)
@@ -395,10 +376,12 @@ public class NDHelpers {
             frontier = newFrontier;
         }
         
-        if(endNode == -1) {
+        if(foundEndNodes.isEmpty()) {
             return Optional.empty();
         }
-        int currentNode = endNode;
+        int currentNode = foundEndNodes.stream()
+                .max(Comparator.comparing(NDHelpers.totalProbabilityAtNodeMapping(board)))
+                .orElseThrow(IllegalStateException::new);
         LinkedList<Integer> backtrack = new LinkedList<>();
         while(!startNodes.contains(currentNode)) {
             backtrack.addFirst(board.getEdgeBetweenAdjacentNodes(currentNode, parentNode.get(currentNode)));
@@ -432,7 +415,7 @@ public class NDHelpers {
             );
         }
         return connected.stream()
-                .map(edge -> board.getAdjacentNodesToEdge(edge))
+                .map(board::getAdjacentNodesToEdge)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
     }
@@ -446,54 +429,8 @@ public class NDHelpers {
      * @param end    coord
      * @return integer road length
      */
-    public static int distanceBetweenNodes(SOCGame game, SOCPlayer player, int start, int end) {
-        return BFSToCoord(game, start, end).size();
-    }
-
-
-    public static Vector<Integer> BFSToCoord(SOCGame game, int start, int end) {
-        Queue<Vector<Integer>> queue = new LinkedList<>();
-
-        // push initial coord
-        Vector<Integer> vec = new Vector<>();
-        vec.add(start);
-        queue.add(vec);
-
-        Vector<Integer> bestPath = new Vector<>();
-
-        while (!queue.isEmpty()) {
-            Vector<Integer> current = queue.poll();
-
-            if (current.size() > bestPath.size() && bestPath.size() != 0) continue;
-
-            // Check for possible settlements
-            for (int node : game.getBoard().getAdjacentNodesToEdge(current.lastElement())) {
-                if (node == end) {
-
-                    Vector<Integer> next = new Vector<>(current);
-                    // add the settlement to the end of the path leading here
-                    next.add(node);
-                    if (NDRobotDM.comparePaths(game, next, bestPath) > 0) {
-                        bestPath = next;
-                    }
-                }
-            }
-
-            // Check for new roads to build to add to queue
-            for (int edge : game.getBoard().getAdjacentEdgesToEdge(current.lastElement())) {
-                boolean isLoop = current.contains(edge);
-                if (NDRobotDM.canBuildRoad(game, edge, current.lastElement()) && !isLoop) {
-                    Vector<Integer> newPath = new Vector<>(current);
-                    newPath.add(edge);
-                    queue.add(newPath);
-                }
-            }
-
-        }
-
-        return bestPath;
-    }
-
+//    public static int distanceBetweenNodes(SOCGame game, SOCPlayer player, int start, int end) {
+//    }
 
     /**
      * Try to trade for resources
@@ -558,31 +495,39 @@ public class NDHelpers {
         return connectingNode.isPresent(); // edges do not touch
     }
 
+    public static int totalProbabilityOfHex(SOCBoard board, final int hexCoord) {
+        int diceNumber = board.getNumberOnHexFromCoord(hexCoord);
+        if(1 <= diceNumber && diceNumber <= 12) {
+            return(diceNumber > 7) ? 13 - diceNumber : diceNumber - 1;
+        }
+        return 0;
+    }
+
     /**
      * Returns the sum of the probabilities of the tiles surrounding a node
      * Memoizes since the value will not change
      *
-     * @param game      the game board
+     * @param board      the game board
+     * @param board
      * @param nodeCoord the node to check
      * @return the total probability
      */
-    public static int totalProbabilityAtNode(SOCGame game, final int nodeCoord) {
-        if (totalProbabilityAtNodeGame != game) {
+    public static int totalProbabilityAtNode(SOCBoard board, final int nodeCoord) {
+        if (totalProbabilityAtNodeBoard != board) {
             totalProbabilityAtNodeCache = new HashMap<>();
-            totalProbabilityAtNodeGame = game;
+            totalProbabilityAtNodeBoard = board;
         }
         if (!totalProbabilityAtNodeCache.containsKey(nodeCoord)) {
-            int sum = 0;
-            for (int hexCoord : game.getBoard().getAdjacentHexesToNode(nodeCoord)) {
-                int diceNumber = game.getBoard().getNumberOnHexFromCoord(hexCoord);
-                // skip water
-                if (diceNumber > 12 || diceNumber <= 0) continue;
-                sum += (diceNumber > 7) ? 13 - diceNumber : diceNumber - 1;
-            }
-
+            int sum = board.getAdjacentHexesToNode(nodeCoord).stream()
+                    .mapToInt(hexNode -> totalProbabilityOfHex(board, hexNode))
+                    .sum();
             totalProbabilityAtNodeCache.put(nodeCoord, sum);
         }
         return totalProbabilityAtNodeCache.get(nodeCoord);
+    }
+
+    public static Function<Integer, Integer> totalProbabilityAtNodeMapping(SOCBoard board) {
+        return node -> totalProbabilityAtNode(board, node);
     }
     
     public static ResourceSet getPlayerResources(NDRobotBrain brain) {
@@ -590,16 +535,19 @@ public class NDHelpers {
     }
 
     public static boolean haveResourcesForRoadAndSettlement(NDRobotBrain brain) {
-        if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT ||
-        		brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCSettlement).count() == SOCPlayer.SETTLEMENT_COUNT
+        if(brain.getOurPlayerData().getPieces().stream()
+                .filter(piece -> piece instanceof SOCRoad)
+                .count() == SOCPlayer.ROAD_COUNT
+            || brain.getOurPlayerData().getPieces().stream()
+                .filter(piece -> piece instanceof SOCSettlement)
+                .count() == SOCPlayer.SETTLEMENT_COUNT
         ) {
             return false;
         }
         ResourceSet set = brain.getOurPlayerData().getResources();
-        return set.getAmount(SOCResourceConstants.CLAY) >= 2 &&
-                set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
-                set.getAmount(SOCResourceConstants.WHEAT) >= 1 &&
-                set.getAmount(SOCResourceConstants.WOOD) >= 2;
+        SOCResourceSet needed = getResourcesFor(SOCPossiblePiece.SETTLEMENT);
+        needed.add(getResourcesFor(SOCPossiblePiece.ROAD));
+        return set.contains(needed);
     }
     
     public static SOCResourceSet getResourcesFor(int type) {
@@ -638,40 +586,7 @@ public class NDHelpers {
     }
 
     public static boolean haveResourcesFor(int type, SOCRobotBrain brain, ResourceSet set) {
-        D.ebugPrintln("Brain thinks bot has: " + set);
-    
-        switch (type) {
-            case SOCPossiblePiece.ROAD: {
-                if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCRoad).count() == SOCPlayer.ROAD_COUNT) {
-                    return false;
-                }
-                return set.getAmount(SOCResourceConstants.CLAY) >= 1 &&
-                        set.getAmount(SOCResourceConstants.WOOD) >= 1;
-            }
-            case SOCPossiblePiece.SETTLEMENT: {
-                if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCSettlement).count() == SOCPlayer.SETTLEMENT_COUNT) {
-                    return false;
-                }
-                return set.getAmount(SOCResourceConstants.CLAY) >= 1 &&
-                        set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
-                        set.getAmount(SOCResourceConstants.WHEAT) >= 1 &&
-                        set.getAmount(SOCResourceConstants.WOOD) >= 1;
-            }
-            case SOCPossiblePiece.CITY: {
-                if(brain.getOurPlayerData().getPieces().stream().filter(piece -> piece instanceof SOCCity).count() == SOCPlayer.CITY_COUNT) {
-                    return false;
-                }
-                return set.getAmount(SOCResourceConstants.ORE) >= 3 &&
-                        set.getAmount(SOCResourceConstants.WHEAT) >= 2;
-            }
-            case SOCPossiblePiece.CARD: {
-                //TODO check if cards are left
-                return set.getAmount(SOCResourceConstants.ORE) >= 1 &&
-                        set.getAmount(SOCResourceConstants.SHEEP) >= 1 &&
-                        set.getAmount(SOCResourceConstants.WHEAT) >= 1;
-            }
-        }
-        return false;
+        return set.contains(getResourcesFor(type));
     }
 
     public static Optional<SOCPossibleSettlement> findQualitySettlementFor(List<Integer> resources, NDRobotBrain brain) {
@@ -683,19 +598,24 @@ public class NDHelpers {
         D.ebugPrintln("Finding quality city");
         SOCGame game = brain.getGame();
         Vector<SOCSettlement> ourSettlements = brain.getOurPlayerData().getSettlements();
-        if (resources.isEmpty()) {
-            return ourSettlements.stream()
-                    .map(SOCPlayingPiece::getCoordinates)
-                    .sorted(Comparator.comparing(node -> totalProbabilityAtNode(game, node)))
-                    .map(node -> new SOCPossibleCity(brain.getOurPlayerData(), node))
-                    .findFirst();
-        }
-        return ourSettlements.stream()
+        if (!resources.isEmpty()) {
+            Optional<SOCPossibleCity> withResources = ourSettlements.stream()
                 .filter(settlement -> settlement.getAdjacentHexes().stream()
                         .anyMatch(hex -> resources.contains(game.getBoard().getHexTypeFromCoord(hex)))
                 )
                 .map(SOCPlayingPiece::getCoordinates)
-                .sorted(Comparator.comparing(node -> totalProbabilityAtNode(game, node)))
+                .sorted(Comparator.comparing(totalProbabilityAtNodeMapping(game.getBoard())).reversed())
+                .map(node -> new SOCPossibleCity(brain.getOurPlayerData(), node))
+                .findFirst();
+            if(withResources.isPresent()) {
+                D.ebugPrintln("Found a city yielding a resource we want");
+                return withResources;
+            }
+        }
+        D.ebugPrintln("Looking for any city");
+        return ourSettlements.stream()
+                .map(SOCPlayingPiece::getCoordinates)
+                .sorted(Comparator.comparing(totalProbabilityAtNodeMapping(game.getBoard())).reversed())
                 .map(node -> new SOCPossibleCity(brain.getOurPlayerData(), node))
                 .findFirst();
     }
@@ -708,60 +628,65 @@ public class NDHelpers {
         return findQualityCityFor(Collections.emptyList(), brain);
     }
 
+    /**
+     * Returns coord of best possible road to place to maximize length
+     *
+     * @return best road to build
+     */
     public static Optional<SOCPossiblePiece> findQualityRoadForLongestRoad(NDRobotBrain brain) {
         D.ebugPrintln("Finding quality road for longest road");
-        return Optional.ofNullable(bestPossibleLongRoad(brain.getGame(), brain.getOurPlayerData()));
+        List<SOCPossiblePiece> roads = bestPossibleLongRoad(brain.getGame(), brain.getOurPlayerData(), 1);
+        if(roads.size() > 0) {
+            return Optional.of(roads.get(0));
+        }
+        return Optional.empty();
     }
 
     public static Optional<SOCPossiblePiece> findQualityRoadForExpansion(NDRobotBrain brain) {
         D.ebugPrintln("Finding quality road for expansion");
-        SOCGame game = brain.getGame();
-        Set<Integer> othersSettlements = game.getBoard().getSettlements().stream()
-                .filter(socSettlement -> socSettlement.getPlayerNumber() != brain.getOurPlayerNumber())
+        SOCBoard board = brain.getGame().getBoard();
+        SOCPlayer player = brain.getOurPlayerData();
+
+        Set<Integer> ourNodes = getConnectedNodes(board, player).stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+
+        Set<Integer> allRoads = board.getRoadsAndShips().stream()
                 .map(SOCPlayingPiece::getCoordinates)
                 .collect(Collectors.toSet());
-        Set<Integer> invalidSettlements = othersSettlements.stream()
-                .flatMap(node -> Stream.concat(Stream.of(node), game.getBoard().getAdjacentNodesToNode(node).stream()))
-                .collect(Collectors.toSet());
-        Set<Integer> occupiedRoads = game.getBoard().getRoadsAndShips().stream()
+        Set<Integer> allSettlements = Stream.concat(board.getSettlements().stream(), board.getCities().stream())
                 .map(SOCPlayingPiece::getCoordinates)
                 .collect(Collectors.toSet());
-        HashSet<Integer> visitedNodes = new HashSet<>();
-        // stores the road that was used to get to a node
-        HashMap<Integer, Integer> getTo = new HashMap<>();
+        Set<Integer> otherSettlements = Stream.concat(board.getSettlements().stream(), board.getCities().stream())
+                .filter(settlement -> settlement.getPlayer() != player)
+                .map(SOCPlayingPiece::getCoordinates)
+                .collect(Collectors.toSet());
 
-        // start frontier as all the nodes that are one buildable road away from where we already have roads
-        // and set all getTo
-        HashSet<Integer> frontier = brain.getOurPlayerData().getRoadNodes().stream()
-                .filter(node -> !othersSettlements.contains(node))
-                .flatMap(node -> game.getBoard().getAdjacentEdgesToNode(node).stream()
-                        .filter(edge -> !occupiedRoads.contains(edge))
-                        // set getTo if not already set
-                        .peek(edge -> getTo.put(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.getOrDefault(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), edge)))
-                        .map(edge -> game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node))
-                )
-                .filter(node -> !othersSettlements.contains(node))
-                .collect(Collectors.toCollection(HashSet::new));
+        List<Integer> destinations = allSettlements.stream()
+                .flatMap(node -> board.getAdjacentNodesToNode(node).stream()
+                        .map(board::getAdjacentNodesToNode)
+                        .flatMap(Collection::stream)
+                        .map(board::getAdjacentNodesToNode)
+                        .flatMap(Collection::stream)
+                ).filter(node ->
+                        !allSettlements.contains(node) &&
+                                board.getAdjacentNodesToNode(node).stream().noneMatch(allSettlements::contains))
+                .collect(Collectors.toList());
 
-        Predicate<Integer> isPossibleSettlement = node -> !invalidSettlements.contains(node);
-        //TODO choose to take a further settlement if it is much better than closer one
-        for(int length = 1; length < 5; length++) {
-            if(frontier.stream().anyMatch(isPossibleSettlement)) {
-                return frontier.stream()
-                        .filter(isPossibleSettlement)
-                        .sorted() //TODO add value comparison, and consider long term growth
-                        .findFirst()
-                        .map(node -> new SOCPossibleRoad(brain.getOurPlayerData(), getTo.get(node), null));
-            }
-            visitedNodes.addAll(frontier);
-            frontier = frontier.stream()
-                    .flatMap(node -> game.getBoard().getAdjacentEdgesToNode(node).stream()
-                            .filter(edge -> !occupiedRoads.contains(edge))
-                            .peek(edge -> getTo.put(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.getOrDefault(game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node), getTo.get(node))))
-                            .map(edge -> game.getBoard().getAdjacentNodeFarEndOfEdge(edge, node))
-                    )
-                    .filter(node -> !othersSettlements.contains(node) && !visitedNodes.contains(node))
-                    .collect(Collectors.toCollection(HashSet::new));
+
+        //TODO how to get to nearest best - prioritize by 2 away not nearest frontier
+        Optional<List<Integer>> pathToNearestPossibleSettlementOffLongest = getBestConnection(
+                ourNodes,
+                destinations,
+                board,
+                allRoads,
+                otherSettlements,
+                StrategyConstants.MAX_DISTANCE_FOR_EXPANSION
+        );
+        if(pathToNearestPossibleSettlementOffLongest.isPresent()) {
+            D.ebugPrintln("Found road towards near possible settlement");
+            return Optional.of(pathToNearestPossibleSettlementOffLongest.get().get(0))
+                    .map(edge -> new SOCPossibleRoad(player, edge, null));
         }
         return Optional.empty(); //TODO add quality road search based on resources like with settlements & cities
     }
@@ -775,21 +700,21 @@ public class NDHelpers {
 
     public static Map<Integer, Integer> getProbabilityForResource(SOCRobotBrain brain) {
         SOCBoard board = brain.getGame().getBoard();
-        //get all the hexes around a settlement
-        Stream<Integer> settlementHexes = brain.getOurPlayerData().getSettlements().stream()
-                .map(SOCSettlement::getAdjacentHexes)
-                .flatMap(Collection::stream);
+        //get settlement nodes
+        Stream<Integer> settlementNodes = brain.getOurPlayerData().getSettlements().stream()
+                .map(SOCSettlement::getCoordinates);
 
-        //get all hexes around a city
-        Stream<Integer> cityHexes = brain.getOurPlayerData().getCities().stream()
-                .map(SOCCity::getAdjacentHexes)
-                .flatMap(Collection::stream);
+        //get city nodes
+        Stream<Integer> cityNodes = brain.getOurPlayerData().getCities().stream()
+                .map(SOCCity::getCoordinates);
         //double city hexes since cities give double
-        cityHexes = cityHexes.flatMap(coord -> Stream.generate(() -> coord).limit(2));
+        cityNodes = cityNodes.flatMap(coord -> Stream.generate(() -> coord).limit(2));
 
         //create a map of resource type to the total probability
-        Map<Integer, Integer> result = Stream.concat(settlementHexes, cityHexes)
-                .collect(Collectors.groupingBy(board::getHexTypeFromCoord, Collectors.summingInt(board::getHexNumFromCoord)));
+        Map<Integer, Integer> result = Stream.concat(settlementNodes, cityNodes)
+                .map(board::getAdjacentHexesToNode)
+                .flatMap(Collection::stream)
+                .collect(Collectors.groupingBy(board::getHexTypeFromCoord, Collectors.summingInt(hexNode -> totalProbabilityOfHex(board, hexNode))));
         IntStream.range(SOCResourceConstants.MIN, SOCResourceConstants.MAXPLUSONE - 1)
             .forEach(type -> result.putIfAbsent(type, 0));
         return result;

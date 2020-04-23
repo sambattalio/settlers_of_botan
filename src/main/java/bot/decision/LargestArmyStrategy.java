@@ -17,7 +17,6 @@ import java.util.Optional;
 
 import static soc.game.SOCResourceConstants.*;
 import static soc.robot.SOCPossiblePiece.*;
-import static soc.robot.SOCPossiblePiece.CARD;
 
 import soc.debug.D;
 
@@ -37,6 +36,7 @@ public class LargestArmyStrategy {
         	D.ebugPrintln("----- City -----");
         	return possibleCity.get();
         } else {
+        	//TODO this originally fired if there was no city that had the resources - was that right?
         	D.ebugPrintln("No quality city");
         }
         

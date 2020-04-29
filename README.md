@@ -95,4 +95,5 @@ to continue with this strategy. They are very good in tweaking how aggresive the
 
 # Bugs
 
-No outstanding bugs to the team's knowledge
+- One piece is played per turn
+- Late game-play is still weak compared to early-mid game

@@ -84,3 +84,15 @@ Here: https://github.com/sambattalio/settlers_of_botan/blob/64719db67084364caf10
 
 There are two magic numbers MAX_ROAD_DIFF and MAX_ARMY_DIFF which determine how far ahead or behind you should be
 to continue with this strategy. They are very good in tweaking how aggresive the bot should play.
+
+# Other Possible Unimplemented Features
+
+- Aggressive road building when the bot's longest road is threatened
+- Longest road cutoff when another player's road has potential to be longer than the bots
+- Keeping track of resouces other players want to offer them more attractive trades
+- Attempting to build more than one piece per turn when a build fails
+- More advanced analysis of what future resources the bot needs when accepting trades
+
+# Bugs
+
+No outstanding bugs to the team's knowledge

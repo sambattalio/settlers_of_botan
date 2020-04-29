@@ -29,6 +29,11 @@ import java.util.List;
 
 import soc.debug.D;
 
+import soc.game.*;
+import soc.robot.*;
+import soc.util.*;
+import soc.message.*;
+
 public class NDRobotBrain extends SOCRobotBrain {
 
     public NDRobotBrain(SOCRobotClient rc, SOCRobotParameters params, SOCGame ga, CappedQueue<SOCMessage> mq) {
@@ -48,6 +53,7 @@ public class NDRobotBrain extends SOCRobotBrain {
     }
      
     public static boolean[] attemptTrade = {true, true, true, false};
+    private int attempts;
     
     public void setWaitingResponse(boolean b) {
     	waitingForTradeResponse = b;
@@ -303,13 +309,17 @@ public class NDRobotBrain extends SOCRobotBrain {
 	    	} 
 	    	
 	    	if (checkShouldContinue()) {
-	    		if (!built && (! (waitingForTradeMsg || waitingForTradeResponse))) {
+	    		if (!built && (! (waitingForTradeMsg || waitingForTradeResponse)) && attempts == 2) {
 	    			D.ebugPrintln("Turn Off " + getIdx(targetPiece.getType()));
-	    			attemptTrade[getIdx(targetPiece.getType())] = false;
+				D.ebugPrintln("Attempts on " + getIdx(targetPiece.getType()) + ": " + attempts);
+				attempts = 0;
+				NDRobotNegotiator.resetTrades();
+	        		attemptTrade[getIdx(targetPiece.getType())] = false;
 	    		}
 	    		
 	    		built = false;
-	    		switch(DecisionTreeType.whichUse(game, getOurPlayerData())) {
+			attempts = attempts + 1;
+	    		/*switch(DecisionTreeType.whichUse(game, getOurPlayerData())) {
 	                case LONGEST_ROAD:
 	                	D.ebugPrintln("Rerun Longest Road Plan");
 	                	decisionMaker.planStuff(-1);
@@ -322,9 +332,8 @@ public class NDRobotBrain extends SOCRobotBrain {
 	                	D.ebugPrintln("Rerun DefaultPlan");
 	                	decisionMaker.planStuff(-1);
 	                    return;
-	            }
+	            }*/
 	    	} 
-
     	}
     	D.ebugPrintln("End of Function");
     }
@@ -334,6 +343,8 @@ public class NDRobotBrain extends SOCRobotBrain {
     	super.resetFieldsAtEndTurn();
     	
     	D.ebugPrintln("End Turn");
+	attempts = 0;
+	NDRobotNegotiator.resetTrades();
         Arrays.fill(attemptTrade, true);
     }
 }

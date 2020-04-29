@@ -28,7 +28,6 @@ import static soc.robot.SOCPossiblePiece.CARD;
 public class LongestRoadStrategy {
 
     public static boolean shouldUse(SOCGame game, SOCPlayer player) {
-    	//TODO check how far ahead we are and make sure we are not trapped
         return NDHelpers.isLongestRoadPossible(game, player.getPlayerNumber()) && !(NDHelpers.canSwitchFromLongestRoad(game, player.getPlayerNumber()));
     }
 
@@ -38,14 +37,32 @@ public class LongestRoadStrategy {
         Optional<SOCPossibleCity> possibleCity;
         Optional<SOCPossiblePiece> possibleRoad;
 
-        //TODO Check if road is threatened before performing other actions
-        if (NDHelpers.haveResourcesForRoadAndSettlement(decisionTreeDM.getBrain())) {
+        /*if (NDHelpers.haveResourcesForRoadAndSettlement(decisionTreeDM.getBrain())) {
             D.ebugPrintln("----- Road & Settlement -----");
             Optional<SOCPossiblePiece> result = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain());
-            //TODO add other checks like this
             if(result.isPresent()) {
-            	return result.get();
-			}
+		return result.get();
+	    }
+        }*/
+
+	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain()) && NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+	    D.ebugPrintln("----- Settlement -----");
+	    return possibleSettlement.get();
+	}
+
+	if(NDHelpers.haveResourcesFor(ROAD, decisionTreeDM.getBrain()) &&  (possibleRoad = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain())).isPresent()) {
+	    D.ebugPrintln("----- Road -----");
+	    return possibleRoad.get();
+	}
+
+	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain()) &&  (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+	    D.ebugPrintln("----- City -----");
+	    return possibleCity.get();
+	}
+
+	if (NDHelpers.haveResourcesFor(CARD, decisionTreeDM.getBrain()) && NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5) {
+                D.ebugPrintln("----- Card -----");
+                return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
         }
 
         if (decisionTreeDM.getBrain().getAttempt(SETTLEMENT) && NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
@@ -55,7 +72,6 @@ public class LongestRoadStrategy {
         	D.ebugPrintln("No settlement");
         }	
 
-        //decisionTreeDM.getBrain().getAttempt(ROAD) && 
         if(decisionTreeDM.getBrain().getAttempt(ROAD) &&  (possibleRoad = NDHelpers.findQualityRoadForLongestRoad(decisionTreeDM.getBrain())).isPresent()) {
         	D.ebugPrintln("----- Road -----");
 	        return possibleRoad.get();
@@ -63,7 +79,6 @@ public class LongestRoadStrategy {
         	D.ebugPrintln("No Road");
         }
 
-        //decisionTreeDM.getBrain().getAttempt(CITY) && 
         if (decisionTreeDM.getBrain().getAttempt(CITY) &&  (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
         	D.ebugPrintln("----- City -----");
         	return possibleCity.get();
@@ -74,13 +89,12 @@ public class LongestRoadStrategy {
 
         if (NDHelpers.haveResourcesFor(CARD, decisionTreeDM.getBrain()) && NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5) {
         	D.ebugPrintln("----- Card -----");
-            return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
+		return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
         } else {
         	D.ebugPrintln("No card");
         }
 
         D.ebugPrintln("Reached Null");
-
         return null;
     }
 }

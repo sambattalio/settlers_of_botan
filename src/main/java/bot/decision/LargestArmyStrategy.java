@@ -28,35 +28,44 @@ public class LargestArmyStrategy {
     }
 
     public static SOCPossiblePiece plan(DecisionTreeDM decisionTreeDM) {
+    
     	D.ebugPrintln("----- Start Largest Army Plan-----");
         Optional<SOCPossibleSettlement> possibleSettlement;
         Optional<SOCPossibleCity> possibleCity;
         Optional<SOCPossiblePiece> possibleRoad;
 
-        if (decisionTreeDM.getBrain().getAttempt(CITY) && (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+	if(NDHelpers.haveResourcesFor(CITY, decisionTreeDM.getBrain()) && (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WHEAT, ORE), decisionTreeDM.getBrain())).isPresent()) {
+	    return possibleCity.get();
+	}
+
+	if(NDHelpers.haveResourcesFor(CARD, decisionTreeDM.getBrain())) {
+            return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
+        }
+
+	if(decisionTreeDM.getBrain().getAttempt(CARD) && ! decisionTreeDM.getPlayer().hasUnplayedDevCards()) {
+                D.ebugPrintln("----- Card -----");
+                return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
+        } else {
+                D.ebugPrintln("No card");
+        }
+ 
+        if (decisionTreeDM.getBrain().getAttempt(CITY) && (possibleCity = NDHelpers.findQualityCityFor(Arrays.asList(WHEAT, ORE), decisionTreeDM.getBrain())).isPresent()) {
         	D.ebugPrintln("----- City -----");
         	return possibleCity.get();
         } else {
         	D.ebugPrintln("No quality city");
         }
-        
-        if ((NDHelpers.haveResourcesFor(CARD, decisionTreeDM.getBrain())) && NDHelpers.getPlayerResources(decisionTreeDM.getBrain()).getTotal() > 5) {
-        	D.ebugPrintln("----- Card -----");
-            return new SOCPossibleCard(decisionTreeDM.getPlayer(), 0);
-        } else {
-        	D.ebugPrintln("No card");
-        }
-        
-        if (NDHelpers.haveResourcesForRoadAndSettlement(decisionTreeDM.getBrain())) {
+                
+        /* if (NDHelpers.haveResourcesForRoadAndSettlement(decisionTreeDM.getBrain())) {
             D.ebugPrintln("----- Road & Settlement -----");
             Optional<SOCPossiblePiece> result = NDHelpers.findQualityRoadForExpansion(decisionTreeDM.getBrain());
             //TODO add other checks like this
             if(result.isPresent()) {
             	return result.get();
 			}
-        }
+        } */
 	
-        if (NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(WOOD, CLAY), decisionTreeDM.getBrain())).isPresent()) {
+        if (NDHelpers.canBuildSettlement(decisionTreeDM.getPlayerNo(), decisionTreeDM.getBrain()) && (possibleSettlement = NDHelpers.findQualitySettlementFor(Arrays.asList(ORE, WHEAT), decisionTreeDM.getBrain())).isPresent()) {
         	if(NDHelpers.haveResourcesFor(SETTLEMENT, decisionTreeDM.getBrain())) {
         	    D.ebugPrintln("----- Settlement -----");
 		    	return possibleSettlement.get();

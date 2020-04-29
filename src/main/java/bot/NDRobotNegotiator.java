@@ -11,6 +11,7 @@ import bot.*;
 
 public class NDRobotNegotiator extends SOCRobotNegotiator {
 	private int[] resourceArray = new int[6];
+	private static boolean[] hasntTried = new boolean[6];
 	private NDRobotBrain brain;
 	private SOCGame game;
 	private int playerNo;
@@ -32,6 +33,7 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 		resourceArray[3] = SOCResourceConstants.WHEAT;
 		resourceArray[4] = SOCResourceConstants.WOOD;
 		resourceArray[5] = SOCResourceConstants.UNKNOWN;
+		Arrays.fill(hasntTried, true);
 	}
 	
 	private SOCPossiblePiece getTargetPiece() {
@@ -44,10 +46,6 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 
 	public int getNumberOfResources() {
 		return getPlayerResources().getKnownTotal();
-	}
-
-	private boolean checkPortsAndFours() {
-		return false;
 	}
 
 	private int toArrayIdx(int type) {
@@ -92,6 +90,10 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 	
 	public SOCResourceSet wrapper(int type) {
 		return determineWhatIsNeeded(type);
+	}
+
+	public static void resetTrades() {
+	    Arrays.fill(hasntTried, true);
 	}
 
 	public SOCResourceSet determineWhatIsNeeded(int type) {
@@ -185,6 +187,7 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 			count -= actualToBuild.getAmount(portType);
 			
 			if(count >= 2) {
+				D.ebugPrintln("I am in ports and I have " + playerResources + " and I am trading 2 of " + portType);
 				SOCResourceSet giveResourceSet = new SOCResourceSet();
 				SOCResourceSet getResourceSet = new SOCResourceSet();
 				
@@ -233,10 +236,11 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 		SOCResourceSet needed = determineWhatIsNeeded(type);
 		
 		SOCResourceSet resources = getPlayerResources();
+		D.ebugPrintln("hasntTried: " + hasntTried[0] + hasntTried[1] + hasntTried[2] + hasntTried[3] + hasntTried[4] + hasntTried[5]);
 		brain.setTradeResponseTime(1000);
 		brain.setWaitingResponse(true);
 
-		if(needed.getTotal() > 2) {
+		if(needed.getTotal() > 3) {
 			D.ebugPrintln("More than 2 resources needed - can't trade");
 			return null;
 		}
@@ -285,15 +289,19 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 
 					for(Integer key: resourcesSorted.keySet()) {
 						if (key != SOCResourceConstants.WOOD && key != SOCResourceConstants.CLAY && resources.getAmount(key) > 0) {
-							if (first) {
+							if (first && hasntTried[toArrayIdx(key)]) {
 								first = false;
+								hasntTried[toArrayIdx(key)] = false;
 								firstResource = key;
 							}
 
 							if (freqs[toArrayIdx(key)] > 6 && resources.getAmount(key) > 0){ //Not Sure What key Here
 								D.ebugPrintln("Trade " + toStringResources(key) + "Because High Frequency and not wood or brick - for road");
-								giveResourceSet.add(1, key);
-								break;
+								if(hasntTried[toArrayIdx(key)]) {
+								    giveResourceSet.add(1, key);
+								    hasntTried[toArrayIdx(key)] = false;
+								    break;
+								}
 							}
 						}
 					}
@@ -304,12 +312,14 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 					}
 
 					if (giveResourceSet.getTotal() == 0) {
-						if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.CLAY) && resources.getAmount(SOCResourceConstants.WOOD) > 1) {
+						if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.CLAY) && resources.getAmount(SOCResourceConstants.WOOD) > 1 && hasntTried[4]) {
 							giveResourceSet.add(1, SOCResourceConstants.WOOD);
 							D.ebugPrintln("Trade wood bc surplus - for road");
-						} else if (resources.getAmount(SOCResourceConstants.CLAY) > resources.getAmount(SOCResourceConstants.WOOD) && resources.getAmount(SOCResourceConstants.CLAY) > 1) {
+							hasntTried[4] = false;
+						} else if (resources.getAmount(SOCResourceConstants.CLAY) > resources.getAmount(SOCResourceConstants.WOOD) && resources.getAmount(SOCResourceConstants.CLAY) > 1 && hasntTried[0]) {
 							giveResourceSet.add(1, SOCResourceConstants.CLAY);
 							D.ebugPrintln("Trade clay bc surplus - for road");
+							hasntTried[0] = false;
 						}
 					}
 
@@ -319,8 +329,9 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 					int bestfreqs = -100;
 					int bestfreqsResource = SOCResourceConstants.UNKNOWN;
 
-					if(resources.getAmount(SOCResourceConstants.ORE) > 0) {
+					if(resources.getAmount(SOCResourceConstants.ORE) > 0 && hasntTried[1]) {
 						D.ebugPrintln("Trade ore bc not need - for settlement");
+						hasntTried[1] = false;
 						giveResourceSet.add(1, SOCResourceConstants.ORE);
 						break;
 					}
@@ -333,8 +344,9 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 					}
 
 					D.ebugPrintln("Trade " + toStringResources(bestfreqsResource) + " bc most likely to get again - for settlement");
-					if(bestfreqsResource != SOCResourceConstants.UNKNOWN) {
+					if(bestfreqsResource != SOCResourceConstants.UNKNOWN && hasntTried[toArrayIdx(bestfreqsResource)]) {
 						giveResourceSet.add(1, bestfreqsResource);
+						hasntTried[toArrayIdx(bestfreqsResource)] = false;
 					}
 
 					break;
@@ -343,47 +355,55 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 					for(Integer key: resourcesSorted.keySet()) {
 						if (key == SOCResourceConstants.ORE || key == SOCResourceConstants.WHEAT) {
 							continue;
-						} else if (freqs[toArrayIdx(key)] > 6 && resources.getAmount(key) > 0){ //Not Sure What key Here
+						} else if (freqs[toArrayIdx(key)] > 2 && resources.getAmount(key) > 0 && hasntTried[toArrayIdx(key)]){ //Not Sure What key Here
 							D.ebugPrintln("Trade " + toStringResources(key) + "Because High Frequency and not ore or wheat - for city");
+							hasntTried[toArrayIdx(key)] = false;
 							giveResourceSet.add(1, key);
 							break;
 						}
 					}
 
-					if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.ORE) > 3) {
+					if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.ORE) > 3 && hasntTried[toArrayIdx(1)]) {
 						D.ebugPrintln("Trade surplus ore - for settlement");
+						hasntTried[toArrayIdx(1)] = false;
 						giveResourceSet.add(1, SOCResourceConstants.ORE);
 					}
 
-					if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.WHEAT) > 2) {
+					if ( needed.getTotal() == 0 && resources.getAmount(SOCResourceConstants.WHEAT) > 2 && hasntTried[toArrayIdx(3)]) {
 						giveResourceSet.add(1, SOCResourceConstants.WHEAT);
+						hasntTried[toArrayIdx(3)] = false;
 						D.ebugPrintln("Trade surplus wheat - for settlement");
 					}
 
 					break;
 				case SOCPossiblePiece.CARD:
 					// pick between wood or CLAY - if neither give surplus sheep, wheat, or ore
-					if (resources.getAmount(SOCResourceConstants.CLAY) > 0 && freqs[toArrayIdx(SOCResourceConstants.CLAY)] > freqs[toArrayIdx(SOCResourceConstants.WOOD)]) {
+ 					if (resources.getAmount(SOCResourceConstants.CLAY) > 0 && freqs[toArrayIdx(SOCResourceConstants.CLAY)] > freqs[toArrayIdx(SOCResourceConstants.WOOD)] && hasntTried[toArrayIdx(0)]) {
 						D.ebugPrintln("Trade clay bc better freq than wood and we have it- for card");
+						hasntTried[toArrayIdx(0)] = false;
 						giveResourceSet.add(1, SOCResourceConstants.CLAY);
 						break;
-					} else if (resources.getAmount(SOCResourceConstants.WOOD) > 0 && freqs[toArrayIdx(SOCResourceConstants.WOOD)] > freqs[toArrayIdx(SOCResourceConstants.CLAY)]) {
+					} else if (resources.getAmount(SOCResourceConstants.WOOD) > 0 && freqs[toArrayIdx(SOCResourceConstants.WOOD)] > freqs[toArrayIdx(SOCResourceConstants.CLAY)] && hasntTried[toArrayIdx(4)]) {
 						D.ebugPrintln("Trade wood bc better freq than clay and we have it- for card");
+						hasntTried[toArrayIdx(4)] = false;
 						giveResourceSet.add(1, SOCResourceConstants.WOOD);
 						break;
-					} else if (resources.getAmount(SOCResourceConstants.CLAY) > resources.getAmount(SOCResourceConstants.WOOD)) {
+					} else if (resources.getAmount(SOCResourceConstants.CLAY) > resources.getAmount(SOCResourceConstants.WOOD) && hasntTried[toArrayIdx(0)]) {
 						D.ebugPrintln("Trade clay bc have more of it than wood- for card");
+						hasntTried[toArrayIdx(0)] = false;
 						giveResourceSet.add(1, SOCResourceConstants.CLAY);
 						break;
-					} else if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.CLAY)) {
+					} else if (resources.getAmount(SOCResourceConstants.WOOD) > resources.getAmount(SOCResourceConstants.CLAY) && hasntTried[toArrayIdx(4)]) {
 						D.ebugPrintln("Trade wood bc have more of it than clay- for card");
+						hasntTried[toArrayIdx(1)] = false;
 						giveResourceSet.add(1, SOCResourceConstants.WOOD);
 						break;
 					}
 
 					for(Integer key: resourcesSorted.keySet()) {
-						if (key != SOCResourceConstants.WOOD && key != SOCResourceConstants.CLAY && resources.getAmount(key) > 1) {
+						if (key != SOCResourceConstants.WOOD && key != SOCResourceConstants.CLAY && resources.getAmount(key) > 1 && hasntTried[toArrayIdx(key)]) {
 							D.ebugPrintln("Trade " + toStringResources(key) + " bc most surplus of that- for card");
+							hasntTried[toArrayIdx(key)] = false;
 							giveResourceSet.add(1, key);
 							break;
 						}
@@ -408,7 +428,7 @@ public class NDRobotNegotiator extends SOCRobotNegotiator {
 		players_to_offer[playerNo] = false; // don't offer self
 
 		for(SOCPlayer p : game.getPlayers()) {
-			if (p.getPublicVP() > player.getTotalVP()) {
+			if (p.getPublicVP() > player.getTotalVP() + 2 || p.getPublicVP() >= 7) {
 				players_to_offer[p.getPlayerNumber()] = false;
 			}
 		}

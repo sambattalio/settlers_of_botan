@@ -8,6 +8,7 @@ import soc.robot.*;
 import bot.*;
 
 import java.util.*;
+import java.util.Collections;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,6 +30,7 @@ public class DecisionTreeDM extends SOCRobotDM {
     @Override
     public void planStuff(int strategy) {
         D.ebugPrintln("----- Plan Stuff " + callCount++ + " -----");
+        
         try {
             switch(DecisionTreeType.whichUse(game, brain.getOurPlayerData())) {
                 case LONGEST_ROAD:
@@ -51,7 +53,9 @@ public class DecisionTreeDM extends SOCRobotDM {
     }
     
     protected void addToPlan(SOCPossiblePiece piece) {
-        if (piece == null) return;
+        if (piece == null) {
+        	return;
+        }
         this.buildingPlan.add(piece);
     }
 

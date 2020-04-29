@@ -101,4 +101,6 @@ to continue with this strategy. They are very good in tweaking how aggresive the
 # Bugs
 
 - One piece is played per turn occasionally when we could build more
+  - Look into the buildingPlan stack mentioned in the unimplemented features section.
 - Late game-play is still weak compared to early-mid game
+  - Modifying the decision tree is the best way to fix this, in the decision directory!

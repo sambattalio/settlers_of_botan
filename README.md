@@ -88,12 +88,17 @@ to continue with this strategy. They are very good in tweaking how aggresive the
 # Other Possible Unimplemented Features
 
 - Aggressive road building when the bot's longest road is threatened
+  - This can be built off of the [best possible long road](https://github.com/sambattalio/settlers_of_botan/blob/c867b500f0f1f542e4c03b85db93931a26e1676b/src/main/java/bot/NDHelpers.java#L258) function
 - Longest road cutoff when another player's road has potential to be longer than the bots
+  - Can be implemented in our Decision directory as wel as the [best possible long road](https://github.com/sambattalio/settlers_of_botan/blob/c867b500f0f1f542e4c03b85db93931a26e1676b/src/main/java/bot/NDHelpers.java#L258) function.
 - Keeping track of resouces other players want to offer them more attractive trades
+  - NDRobotBrain.java is a good place to look to work with trading!
 - Attempting to build more than one piece per turn when a build fails
+  - Perhaps look at working with the buildingPlan stack that Jsettlers2 uses more. 
 - More advanced analysis of what future resources the bot needs when accepting trades
+  - NDRobotBrain.java
 
 # Bugs
 
-- One piece is played per turn
+- One piece is played per turn occasionally when we could build more
 - Late game-play is still weak compared to early-mid game
